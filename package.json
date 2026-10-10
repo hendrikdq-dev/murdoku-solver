@@ -1,0 +1,15 @@
+{
+  "name": "murdoku-solver",
+  "version": "0.1.0",
+  "description": "Solucionador, motor de deducción explicada y herramientas de pistas para puzles Murdoku (Sudoku + misterio de asesinato)",
+  "license": "MIT",
+  "private": false,
+  "engines": { "node": ">=20" },
+  "bin": { "murdoku": "src/cli.js" },
+  "scripts": {
+    "test": "node --test",
+    "solve": "node src/cli.js solve",
+    "explain": "node src/cli.js explain"
+  },
+  "keywords": ["murdoku", "puzzle", "logic", "solver", "sudoku"]
+}

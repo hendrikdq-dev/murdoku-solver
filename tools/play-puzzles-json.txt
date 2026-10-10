@@ -1,0 +1,45 @@
+Puzles de https://murdoku.com/play (JSON publicos que carga la pagina, capturados el 10-10-2026)
+Patron: https://murdoku.com/play_puzzles/en/puzzle-<slug>-<dificultad>.json   (textos en espanol: /play_puzzles/es/puzzle-<slug>-<dificultad>-es.json)
+
+https://murdoku.com/play_puzzles/en/puzzle-book-club-very-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-24h-delivery-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-fireside-beach-very-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-netflix-and-kill-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-outdoor-painting-very-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-the-pigsty-very-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-car-repair-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-hoarders-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-horse-with-no-name-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-the-flower-store-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-the-garage-band-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-backyard-garden-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-the-riding-lesson-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-piano-lesson-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-midnight-rain-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-the-bus-stop-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-the-picnic-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-the-beach-easy.json
+https://murdoku.com/play_puzzles/en/puzzle-white-wedding-medium.json
+https://murdoku.com/play_puzzles/en/puzzle-the-retirement-community-medium.json
+https://murdoku.com/play_puzzles/en/puzzle-neighbour-dispute-medium.json
+https://murdoku.com/play_puzzles/en/puzzle-the-terracotta-courtyard-medium.json
+https://murdoku.com/play_puzzles/en/puzzle-lake-fishing-medium.json
+https://murdoku.com/play_puzzles/en/puzzle-preppers-medium.json
+https://murdoku.com/play_puzzles/en/puzzle-the-french-restaurant-medium.json
+https://murdoku.com/play_puzzles/en/puzzle-surprise-visitors-medium.json
+https://murdoku.com/play_puzzles/en/puzzle-remote-village-hard.json
+https://murdoku.com/play_puzzles/en/puzzle-a-messy-situation-hard.json
+https://murdoku.com/play_puzzles/en/puzzle-the-wine-cellar-hard.json
+https://murdoku.com/play_puzzles/en/puzzle-the-donut-house-hard.json
+https://murdoku.com/play_puzzles/en/puzzle-river-crossing-hard.json
+https://murdoku.com/play_puzzles/en/puzzle-the-panic-room-hard.json
+https://murdoku.com/play_puzzles/en/puzzle-minigolf-hard.json
+https://murdoku.com/play_puzzles/en/puzzle-the-abandoned-museum-hard.json
+https://murdoku.com/play_puzzles/en/puzzle-grizzly-night-hard.json
+https://murdoku.com/play_puzzles/en/puzzle-frontier-town-hard.json
+https://murdoku.com/play_puzzles/en/puzzle-main-street-expert.json
+https://murdoku.com/play_puzzles/en/puzzle-the-ceos-office-expert.json
+https://murdoku.com/play_puzzles/en/puzzle-the-golf-expert.json
+https://murdoku.com/play_puzzles/en/puzzle-the-zoo-expert.json
+
+Contenido de cada JSON: PROPERTIES (tamano, numero de personajes, indice del asesino, reglas extra clue_custom_text, pistas oficiales player_hint_N, texto de la solucion solution_text_EN_N), CHARACTERS (nombres, pista de cada uno char_quote + char_subquote, rasgos del retrato), GRID (room_code por casilla = area, room_objects por casilla = objeto, nombres de areas, subareas), OBJECT (colores).

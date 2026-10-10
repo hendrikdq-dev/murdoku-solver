@@ -1,0 +1,13 @@
+# Material privado o con derechos de terceros: PDFs oficiales, capturas, soluciones de concursos en curso
+private/
+# Copias locales de los JSON oficiales de murdoku.com/play
+cache/
+# Salidas generadas
+out/
+node_modules/
+*.log
+*.pdf
+*.xcf
+mi-progreso*.png
+Thumbs.db
+.DS_Store

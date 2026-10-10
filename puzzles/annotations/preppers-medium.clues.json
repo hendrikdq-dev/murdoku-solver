@@ -1,0 +1,14 @@
+{
+  "_comment": "Logical encoding of the clues of the official /play puzzle 'Preppers' (9x9, medium). The clue texts themselves are in the official JSON.",
+  "characters": {
+    "Angelo":    { "constraints": [{ "type": "object_in_area", "object": "box" }, { "type": "not_beside", "object": "box" }] },
+    "Blake":     { "constraints": [{ "type": "in_area", "area": "Bedroom" }] },
+    "Carolina":  { "constraints": [{ "type": "someone_in_area", "sex": "m", "on": "bed" }] },
+    "Darla":     { "constraints": [{ "type": "other_beside_in_area", "object": "shelf" }] },
+    "Emelia":    { "constraints": [{ "type": "row", "value": "bottom" }] },
+    "Friedrich": { "constraints": [{ "type": "beside", "object": "tv" }] },
+    "Grady":     { "constraints": [{ "type": "on", "object": "chair" }] },
+    "Howie":     { "constraints": [{ "type": "in_area", "area": "Bathroom" }] },
+    "Vivianna":  { "role": "victim" }
+  }
+}

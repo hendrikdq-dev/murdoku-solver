@@ -1,0 +1,14 @@
+{
+  "name": "Ejemplo de juguete (4x4)",
+  "objective": "murder",
+  "areas": ["KLLL", "KLLL", "MMLL", "MMNN"],
+  "areaNames": { "K": "Kitchen", "L": "Living Room", "M": "Bedroom", "N": "Yard" },
+  "objects": { "R1C1": "table", "R1C3": "chair", "R3C1": "bed", "R4C3": "tree" },
+  "doors": [ [[2, 2], [2, 3]] ],
+  "characters": [
+    { "name": "Alba", "sex": "f", "role": "victim", "clue": "The victim. She was in the top row.", "constraints": [{ "type": "row", "value": "top" }] },
+    { "name": "Bruno", "sex": "m", "clue": "He was on a bed.", "constraints": [{ "type": "on", "object": "bed" }] },
+    { "name": "Clara", "sex": "f", "clue": "She was beside a chair.", "constraints": [{ "type": "beside", "object": "chair" }] },
+    { "name": "Dani", "sex": "m", "clue": "He was in the Yard.", "constraints": [{ "type": "in_area", "area": "Yard" }] }
+  ]
+}
