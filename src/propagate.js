@@ -57,7 +57,7 @@ function createPropagator(P, constraints, opts = {}) {
       if (st.cand[k].length <= 1) continue;
       for (const { word, of } of DIMS) {
         const lines = new Set(st.cand[k].map(of));
-        if (lines.size === 1) { const v = [...lines][0]; for (let m = 0; m < n; m++) if (m !== k) ch = emit(m, d => of(d) !== v, `${name(k)} está seguro en la ${word} ${v}`) || ch; }
+        if (lines.size === 1) { const v = [...lines][0]; for (let m = 0; m < n; m++) if (m !== k) ch = emit(m, d => of(d) !== v, `${name(k)} tiene que estar en la ${word} ${v}`) || ch; }
       }
     }
     if (ch) return true;

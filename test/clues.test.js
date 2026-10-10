@@ -236,9 +236,9 @@ test('beside who / same_row / same_col do not exist: two persons never share a r
   const P = makePuzzle();
   baseSolutions = baseSolutions || allSolutions(P);
   assert.ok(!baseSolutions.some(s => adjacent(P, s[ANA], s[BEA]) || row(P, s[ANA]) === row(P, s[BEA]) || col(P, s[ANA]) === col(P, s[BEA])));
-  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'beside', who: 'Bea' }] })), /beside: falta "object" o "area" \(Ana\)/);
-  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'same_row', who: 'Bea' }] })), /Unknown constraint type: same_row/);
-  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'same_col', who: 'Bea' }] })), /Unknown constraint type: same_col/);
+  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'beside', who: 'Bea' }] })), /pista de Ana \(beside\): falta "object" o "area"/);
+  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'same_row', who: 'Bea' }] })), /tipo de pista desconocido: same_row/);
+  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'same_col', who: 'Bea' }] })), /tipo de pista desconocido: same_col/);
 });
 
 // ---------------- error handling ----------------
@@ -255,12 +255,29 @@ test('a programming error inside a revise surfaces instead of being reported as 
 });
 
 // ---------------- loader and builder errors ----------------
-test('loader and builder reject malformed input with a message', () => {
-  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'levitating' }] })), /Unknown constraint type: levitating/);
-  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'with', who: 'Zoe' }] })), /Unknown character: Zoe/);
-  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'direction', who: 'Bea', dir: 'norte' }] })), /bad direction: norte \(Ana;/);
-  assert.throws(() => makePuzzle({}, [], spec => { spec.areas[2] = 'CCC'; }), /expected 5/);
-  assert.throws(() => makePuzzle({}, [], spec => { spec.objects['R9C1'] = 'chair'; }), /outside grid/);
-  assert.throws(() => makePuzzle({}, [], spec => { spec.objects['x1'] = 'chair'; }), /Bad cell key/);
-  assert.throws(() => makePuzzle({}, [], spec => { spec.groups.staff.push('Nadie'); }), /unknown member Nadie/);
+test('loader and builder reject malformed input with a message naming the culprit', () => {
+  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'levitating' }] })), /pista de Ana \(levitating\): tipo de pista desconocido: levitating/);
+  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'with', who: 'Zoe' }] })), /pista de Ana \(with\): personaje desconocido: Zoe/);
+  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'direction', who: 'Bea', dir: 'norte' }] })), /pista de Ana \(direction\): dirección no válida: "norte" \(usa north, /);
+  assert.throws(() => solve(makePuzzle({}, [{ type: 'empty_area' }, { type: 'nope' }])), /pista global \(nope\): tipo de pista desconocido/);
+  assert.throws(() => makePuzzle({}, [], spec => { spec.areas[2] = 'CCC'; }), /areas: la fila "CCC" tiene 3 casillas y se esperaban 5/);
+  assert.throws(() => makePuzzle({}, [], spec => { spec.height = 5; spec.areas.push('EEEEE'); }), /areas: se esperaban 5 filas y hay 6/);
+  assert.throws(() => makePuzzle({}, [], spec => { delete spec.areas; }), /falta "areas"/);
+  assert.throws(() => makePuzzle({}, [], spec => { spec.objects['R9C1'] = 'chair'; }), /objeto fuera del tablero: R9C1/);
+  assert.throws(() => makePuzzle({}, [], spec => { spec.objects['x1'] = 'chair'; }), /clave de casilla no válida: x1/);
+  assert.throws(() => makePuzzle({}, [], spec => { spec.groups.staff.push('Nadie'); }), /grupo staff: miembro desconocido Nadie/);
+  assert.throws(() => makePuzzle({}, [], spec => { spec.characters.push({ name: 'ana' }); }), /personaje duplicado: ana/);
+  assert.throws(() => makePuzzle({}, [], spec => { spec.characters.push({ sex: 'm' }); }), /personaje sin nombre/);
+  assert.throws(() => makePuzzle({}, [], spec => { spec.characters[0].sex = 'x'; }), /Ana: sexo no válido "x"/);
+  assert.throws(() => makePuzzle({}, [], spec => { spec.characters[0].role = 'vicitm'; }), /Ana: rol no válido "vicitm"/);
+  assert.throws(() => makePuzzle({}, [], spec => { spec.objective = 'theft'; }), /objective no válido: "theft"/);
+  assert.throws(() => makePuzzle({}, [], spec => { spec.subareas = { Z: 'A' }; }), /subareas: código desconocido "Z"/);
+  assert.throws(() => makePuzzle({}, [], spec => { spec.subareas = { A: 'Z' }; }), /subareas: zona principal desconocida "Z"/);
+  assert.throws(() => makePuzzle({}, [], spec => { spec.doors.push([[6, 1], [6, 2]]); }), /doors: casilla fuera del tablero R6C1/);
+  // doubtful choices are warnings, not errors
+  const P = makePuzzle({}, [], spec => { spec.objects.R2C1 = 'chiar'; spec.areaNames.Z = 'Nowhere'; });
+  assert.match(P.meta.warnings.find(w => w.startsWith('objeto')), /objeto desconocido "chiar" en R2C1: se trata como no ocupable/);
+  assert.match(P.meta.warnings.find(w => w.startsWith('areaNames')), /código "Z" no aparece en "areas"/);
+  assert.ok(!P.isFree(P.idx(2, 1)));
+  assert.deepStrictEqual(makePuzzle().meta.warnings, []);
 });

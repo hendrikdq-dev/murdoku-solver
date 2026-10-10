@@ -54,6 +54,7 @@ node src/cli.js explain puzzles/examples/faro-tesoro.json   # 7×7 con tesoro, s
 - Las pistas en lenguaje natural no se interpretan automáticamente: hay que codificarlas (ver la tabla de tipos en `puzzles/FORMAT.md`). Cuando un puzle usa una construcción nueva, se añade el tipo a `src/clues.js`.
 - Puertas y ventanas de los JSON oficiales: el formato guarda los bordes (`room_windows_h/v`) pero su orientación no está verificada todavía; de momento se declaran a mano en la anotación (`"doors"`).
 - El sitio de /play está en fase alfa y su formato puede cambiar.
+- El CLI valida opciones y ficheros (los errores indican el fichero, la pista y el personaje implicados) y avisa por `stderr` de las decisiones dudosas: objetos desconocidos en puzles propios, víctima deducida del texto de la pista, sexo no reconocido o JSON oficial sin personajes.
 
 ## Tests
 

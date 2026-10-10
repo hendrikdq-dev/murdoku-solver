@@ -28,7 +28,9 @@ function cellMap(obj, prefix, w, h) {
 function loadOfficialJson(json, annotations = {}, lang = 'en') {
   const P = json.PROPERTIES || {}, G = json.GRID || {}, C = json.CHARACTERS || {};
   const w = num(P.grid_w), h = num(P.grid_h);
-  if (!w || !h) throw new Error('grid size missing');
+  if (!w || !h) throw new Error('tamaño de rejilla ausente (PROPERTIES.grid_w / grid_h)');
+  const warnings = [];
+  const label = i => `R${Math.floor(i / w) + 1}C${(i % w) + 1}`;
   const rawCodes = cellMap(G, 'room_code_', w, h);
   const codesPresent = [...new Set(rawCodes.filter(c => c !== null))].sort((a, b) => a - b);
   const maxCode = Math.max(...codesPresent);
@@ -49,6 +51,7 @@ function loadOfficialJson(json, annotations = {}, lang = 'en') {
     if (code === null || code <= 0) continue;
     const def = BY_ID.get(code);
     const name = def ? normObj(def.name) : `obj${code}`;
+    if (!def) warnings.push(`código de objeto desconocido ${code} en ${label(i)}: se trata como no ocupable ("${name}")`);
     const put = j => { if (objects[j] === null) objects[j] = name; };
     put(i);
     const x = i % w, y = Math.floor(i / w);
@@ -66,6 +69,7 @@ function loadOfficialJson(json, annotations = {}, lang = 'en') {
   const frontCells = doorCells(annotations.doors, w);
   // characters
   const total = num(P.total_chars) ?? num(P.total_char) ?? 0;
+  if (!total) warnings.push('el JSON no indica total_chars: no se carga ningún personaje');
   const characters = [];
   for (let k = 0; k < total; k++) {
     const name = (C[`char_name_${k}`] ?? '').trim();
@@ -75,15 +79,18 @@ function loadOfficialJson(json, annotations = {}, lang = 'en') {
     if (num(C[`char_hat_${k}`])) attrs.add('hat');
     const ann = (annotations.characters || {})[name] || {};
     for (const a of ann.attrs || []) attrs.add(String(a).toLowerCase());
-    const isVictim = ann.role === 'victim' || /\b(the victim|la v[ií]ctima|la victime|a v[ií]tima)\b/i.test(quote);
+    const victimByText = /\b(the victim|la v[ií]ctima|la victime|a v[ií]tima)\b/i.test(quote);
+    if (!ann.role && victimByText) warnings.push(`${name} se considera la víctima por el texto de su pista ("${quote}"); confírmalo con "role": "victim" en la anotación`);
+    const sexCode = num(C[`char_sex_${k}`]);
+    if (sexCode !== 0 && sexCode !== 1) warnings.push(`${name}: valor de sexo no reconocido (${C[`char_sex_${k}`]}); se asume hombre`);
     characters.push({
-      name, sex: num(C[`char_sex_${k}`]) === 1 ? 'f' : 'm', attrs,
-      role: ann.role || (isVictim ? 'victim' : 'suspect'), clue: quote,
+      name, sex: sexCode === 1 ? 'f' : 'm', attrs,
+      role: ann.role || (victimByText ? 'victim' : 'suspect'), clue: quote,
       constraints: ann.constraints || [],
       official: { index: k, accessory: num(C[`char_accessory_${k}`]), hat: num(C[`char_hat_${k}`]) },
     });
   }
-  applyGroups(characters, annotations.groups);
+  if (characters.length) applyGroups(characters, annotations.groups);   // without characters the warning above is the useful message
   const hints = [], solution = [];
   for (let i = 1; i <= 40; i++) { const t = P[`player_hint_${i}_${lang}`] ?? P[`player_hint_${i}_en`]; if (t) hints.push(t); }
   for (let i = 0; i < 40; i++) { const t = P[`solution_text_${lang.toUpperCase()}_${i}`] ?? P[`solution_text_EN_${i}`]; if (t) solution.push(t); }
@@ -93,7 +100,7 @@ function loadOfficialJson(json, annotations = {}, lang = 'en') {
     name: title, objective: annotations.objective || 'murder', width: w, height: h, areaIds, areaNames, subareaOf,
     objects, occupiableNames, frontCells, areaGroups: annotations.areaGroups || {}, characters,
     global: annotations.global || [],
-    meta: { source: 'official', murdererIndex: num(P.murderer), hints, solution, customRules, edges, annotated: !!annotations.characters },
+    meta: { source: 'official', murdererIndex: num(P.murderer), hints, solution, customRules, edges, annotated: !!annotations.characters, warnings },
   });
 }
 

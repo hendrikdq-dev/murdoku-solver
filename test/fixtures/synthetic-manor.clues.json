@@ -1,0 +1,72 @@
+{
+  "_comment": "Synthetic puzzle in the murdoku.com/play JSON format (own data, used by the tests).",
+  "characters": {
+    "Ivy": {
+      "constraints": [
+        {
+          "type": "in_area",
+          "area": "Shed"
+        }
+      ]
+    },
+    "Jack": {
+      "constraints": [
+        {
+          "type": "on",
+          "object": "bed"
+        },
+        {
+          "type": "direction",
+          "who": "Leo",
+          "dir": "west"
+        }
+      ]
+    },
+    "Kim": {
+      "constraints": [
+        {
+          "type": "in_area",
+          "area": "Lounge"
+        },
+        {
+          "type": "beside",
+          "object": "chair"
+        }
+      ]
+    },
+    "Leo": {
+      "constraints": [
+        {
+          "type": "in_area",
+          "area": "Yard"
+        },
+        {
+          "type": "in_area",
+          "area": "Shed",
+          "not": true
+        }
+      ],
+      "attrs": [
+        "beard"
+      ]
+    }
+  },
+  "groups": {
+    "gents": [
+      "Jack",
+      "Leo"
+    ]
+  },
+  "doors": [
+    [
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        3
+      ]
+    ]
+  ]
+}

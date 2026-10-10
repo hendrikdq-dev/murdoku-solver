@@ -107,7 +107,7 @@ class Puzzle {
 
   charIndex(name) {
     const k = this._nameIndex.get(String(name).toLowerCase());
-    if (k === undefined) throw new Error(`Unknown character: ${name}`);
+    if (k === undefined) throw new Error(`personaje desconocido: ${name}`);
     return k;
   }
   isPerson(k) { return this.characters[k].role !== 'treasure'; }
@@ -126,7 +126,7 @@ function doorCells(doors, width) { return (doors || []).map(pair => pair.map(([r
 function applyGroups(characters, groups) {
   for (const [g, members] of Object.entries(groups || {})) for (const m of members) {
     const ch = characters.find(c => c.name.toLowerCase() === String(m).toLowerCase());
-    if (!ch) throw new Error(`group ${g}: unknown member ${m}`);
+    if (!ch) throw new Error(`grupo ${g}: miembro desconocido ${m}`);
     ch.attrs.add(g.toLowerCase());
   }
 }

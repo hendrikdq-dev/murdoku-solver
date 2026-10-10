@@ -17,11 +17,16 @@ const DIR_ES = { north: 'al norte de', south: 'al sur de', east: 'al este de', w
 
 function buildConstraints(P) {
   const out = [];
+  // errors in a clue specification are reported with their owner and type
+  const add = (spec, k, where) => {
+    try { out.push(build(P, spec || {}, k)); }
+    catch (e) { throw new Error(`${where} (${spec && spec.type}): ${e.message}`); }
+  };
   P.characters.forEach((ch, k) => {
-    for (const spec of ch.constraints) out.push(build(P, spec, k));
+    for (const spec of ch.constraints) add(spec, k, `pista de ${ch.name}`);
     if (ch.role === 'victim' && P.objective === 'murder') out.push(build(P, { type: 'victim' }, k));
   });
-  for (const spec of P.global) out.push(build(P, spec, null));
+  for (const spec of P.global) add(spec, null, 'pista global');
   return out;
 }
 
@@ -135,7 +140,7 @@ function build(P, spec, owner) {
       // never orthogonally adjacent. Only objects and areas are supported.
       if (obj) return { ...base, text: `${myName}: ${neg ? 'no ' : ''}junto a ${obj}`, unary: c => N(P.besideObject(c, obj)) };
       if (spec.area) { const m = P.areaMatcher(spec.area); return { ...base, text: `${myName}: ${neg ? 'no ' : ''}junto a ${spec.area}`, unary: c => N(P.besideArea(c, m)) }; }
-      throw new Error(`beside: falta "object" o "area" (${myName})`);
+      throw new Error('falta "object" o "area"');
     }
     case 'on': return { ...base, text: `${myName}: ${neg ? 'no ' : ''}sobre ${obj}`, unary: c => N(P.objectAt(c) === obj) };
     case 'row': {
@@ -166,7 +171,7 @@ function build(P, spec, owner) {
     case 'in_front_of_door': return { ...base, text: `${myName}: ${neg ? 'no ' : ''}frente a una puerta`, unary: c => N(P.inFrontOfDoor(c)) };
     case 'direction': {
       const w = who(P, spec.who);
-      if (!DIRS[spec.dir]) throw new Error(`bad direction: ${spec.dir} (${myName}; usa north, south, east, west, northeast, northwest, southeast o southwest)`);
+      if (!DIRS[spec.dir]) throw new Error(`dirección no válida: "${spec.dir}" (usa ${Object.keys(DIRS).join(', ')})`);
       const [dr, dc] = DIRS[spec.dir];
       // delta along the main axis: positive when me is in the stated direction from who
       const delta = (c, d) => {
@@ -376,7 +381,7 @@ function build(P, spec, owner) {
         revise: (st, emit) => { let ch = false; for (const k of ps) ch = emit(k, d => !cells.has(d), `la zona ${spec.area} está vacía`) || ch; return ch; } };
     }
     default:
-      throw new Error(`Unknown constraint type: ${t}`);
+      throw new Error(`tipo de pista desconocido: ${t}`);
   }
 }
 

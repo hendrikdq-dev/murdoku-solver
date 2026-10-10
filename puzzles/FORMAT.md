@@ -30,6 +30,8 @@ Un puzle se describe en un fichero JSON con esta estructura (ejemplo reducido):
 - `characters`: `sex` (`m`/`f`), `attrs` (etiquetas libres: `hat`, `eyepatch`, `glasses`...), `role` (`suspect` por defecto, `victim`, `treasure`), `clue` (texto) y `constraints` (codificación lógica, ver abajo). `groups` añade una etiqueta a varios personajes.
 - `global`: restricciones que no pertenecen a un personaje.
 
+Validación: el cargador rechaza con un mensaje concreto las filas de `areas` de longitud distinta, las claves de casilla mal formadas o fuera del tablero, los códigos desconocidos en `subareas`, las puertas fuera del tablero, los nombres de personaje repetidos o ausentes, los valores de `sex`, `role` y `objective` fuera de su vocabulario y los miembros de `groups` que no existen. Un objeto cuyo nombre no está en la tabla oficial ni en `occupiable`/`occupiableExtra` se trata como no ocupable y genera un aviso (así una errata como `chiar` no bloquea una casilla en silencio).
+
 ## Tipos de restricción
 
 Todas admiten `"not": true` para negarlas salvo que se indique lo contrario.
