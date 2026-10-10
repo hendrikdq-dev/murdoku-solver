@@ -38,8 +38,42 @@ function filterPersons(P, f = {}) {
   });
 }
 const sexEs = s => (s && s[0].toLowerCase() === 'f' ? 'una mujer' : 'un hombre');
+const DIMS = P => [{ word: 'fila', of: c => P.row(c) }, { word: 'columna', of: c => P.col(c) }];
+
+// ---------- generic helpers for check / support ----------
+/** check of a binary clue: nothing to say until both characters are placed. */
+function binaryCheck(me, w, pred) { return pos => (pos[me] < 0 || pos[w] < 0) ? true : pred(pos[me], pos[w]); }
+
+/** check + support of an existential clue: once `me` is placed, some witness among `ps` must (still) be possible. */
+function existential(P, me, ps, witness) {
+  return {
+    check: pos => { if (pos[me] < 0 || ps.some(k => pos[k] < 0)) return true; return ps.some(k => witness(pos[me], pos[k])); },
+    support: (pos, candOf) => existentialSupport(P, pos, candOf, me, ps, witness),
+  };
+}
 
 // ---------- generic helpers for revise ----------
+/**
+ * "Occupied line" inference: when every cell `ds` where the witnesses `ks` can satisfy a clue lies
+ * on a single line, that line belongs to a witness: the others leave it and the witnesses keep
+ * only the cells of `ds` on it. `reason(word, lineNumber, witnessNames)` builds the explanation.
+ */
+function lineOwnedBy(P, st, emit, exclude, ks, ds, dims, reason) {
+  let ch = false;
+  const names = ks.map(k => cname(P, k)).join('/');
+  for (const { word, of } of dims) {
+    const lines = [...new Set(ds.map(of))];
+    if (lines.length !== 1) continue;
+    const v = lines[0], why = reason(word, v, names);
+    for (let k = 0; k < st.cand.length; k++) {
+      if (k === exclude) continue;
+      if (ks.includes(k)) ch = emit(k, d => of(d) !== v || ds.includes(d), why) || ch;
+      else ch = emit(k, d => of(d) !== v, why) || ch;
+    }
+  }
+  return ch;
+}
+
 function pairRevise(P, st, emit, a, b, pred, reason) {
   // a <- cells c with some d in cand[b], different row & col, pred(c,d); and symmetric
   const ok = (c, d) => c !== d && P.row(c) !== P.row(d) && P.col(c) !== P.col(d) && pred(c, d);
@@ -64,18 +98,7 @@ function existentialRevise(P, st, emit, me, witnessSet, witness, label) {
     for (const k of witnessSet) for (const d of st.cand[k]) if (ok(c, d) && witness(c, d, k)) pairs.push([k, d]);
     const ks = [...new Set(pairs.map(p => p[0]))], ds = [...new Set(pairs.map(p => p[1]))];
     if (ks.length === 1) ch = emit(ks[0], d => ds.includes(d), `${label}: solo ${cname(P, ks[0])} puede cumplirlo`) || ch;
-    const rows = [...new Set(ds.map(P.row.bind(P)))], cols = [...new Set(ds.map(P.col.bind(P)))];
-    const names = ks.map(k => cname(P, k)).join('/');
-    if (rows.length === 1) for (let k = 0; k < st.cand.length; k++) {
-      if (k === me) continue;
-      if (ks.includes(k)) ch = emit(k, d => P.row(d) !== rows[0] || ds.includes(d), `${label}: la fila ${rows[0]} la ocupa quien lo cumple (${names})`) || ch;
-      else ch = emit(k, d => P.row(d) !== rows[0], `${label}: la fila ${rows[0]} la ocupa quien lo cumple (${names})`) || ch;
-    }
-    if (cols.length === 1) for (let k = 0; k < st.cand.length; k++) {
-      if (k === me) continue;
-      if (ks.includes(k)) ch = emit(k, d => P.col(d) !== cols[0] || ds.includes(d), `${label}: la columna ${cols[0]} la ocupa quien lo cumple (${names})`) || ch;
-      else ch = emit(k, d => P.col(d) !== cols[0], `${label}: la columna ${cols[0]} la ocupa quien lo cumple (${names})`) || ch;
-    }
+    ch = lineOwnedBy(P, st, emit, me, ks, ds, DIMS(P), (word, v, names) => `${label}: la ${word} ${v} la ocupa quien lo cumple (${names})`) || ch;
   }
   return ch;
 }
@@ -162,7 +185,7 @@ function build(P, spec, owner) {
       const qual = spec.exact !== undefined ? `exactamente ${spec.exact} ` : spec.min !== undefined ? `al menos ${spec.min} ` : '';
       const unit = qual ? (dr ? 'filas ' : 'columnas ') : '';
       return { ...base, text: `${myName}: ${neg ? 'no ' : ''}${qual}${unit}${DIR_ES[spec.dir]} ${cname(P, w)}`,
-        check: pos => (pos[me] < 0 || pos[w] < 0) ? true : pred(pos[me], pos[w]),
+        check: binaryCheck(me, w, pred),
         revise: (st, emit) => {
           if (neg) return false;
           if (st.cand[me].length * st.cand[w].length <= 4000) return pairRevise(P, st, emit, me, w, pred, `${myName} ${qual}${unit}${DIR_ES[spec.dir]} ${cname(P, w)}`);
@@ -185,7 +208,7 @@ function build(P, spec, owner) {
       const w = who(P, spec.who);
       const pred = (c, d) => N(P.areaOf(c) === P.areaOf(d));
       return { ...base, text: `${myName}: ${neg ? 'no ' : ''}en la misma zona que ${cname(P, w)}`,
-        check: pos => (pos[me] < 0 || pos[w] < 0) ? true : pred(pos[me], pos[w]),
+        check: binaryCheck(me, w, pred),
         revise: (st, emit) => {
           if (neg) return false;
           const areasW = new Set(st.cand[w].map(d => P.areaOf(d))), areasM = new Set(st.cand[me].map(c => P.areaOf(c)));
@@ -228,8 +251,7 @@ function build(P, spec, owner) {
       const ps = persons(P).filter(k => k !== me);
       const witness = (c, d) => P.areaOf(c) === P.areaOf(d);
       return { ...base, text: `${myName}: no estaba a solas`,
-        check: pos => { if (pos[me] < 0 || ps.some(k => pos[k] < 0)) return true; return ps.some(k => witness(pos[me], pos[k])); },
-        support: (pos, candOf) => existentialSupport(P, pos, candOf, me, ps, witness),
+        ...existential(P, me, ps, witness),
         revise: (st, emit) => existentialRevise(P, st, emit, me, ps, witness, `${myName} no está a solas`) };
     }
     case 'only_on': {
@@ -243,8 +265,7 @@ function build(P, spec, owner) {
       const witness = (c, d) => P.areaOf(c) === P.areaOf(d) && P.besideObject(d, obj);
       return { ...base, text: `${myName}: otra persona de su zona estaba junto a ${obj}`,
         unary: c => P.cellsOfArea(P.areaOf(c)).some(d => d !== c && P.isFree(d) && P.besideObject(d, obj)),
-        check: pos => { if (pos[me] < 0 || ps.some(k => pos[k] < 0)) return true; return ps.some(k => witness(pos[me], pos[k])); },
-        support: (pos, candOf) => existentialSupport(P, pos, candOf, me, ps, witness),
+        ...existential(P, me, ps, witness),
         revise: (st, emit) => existentialRevise(P, st, emit, me, ps, witness, `${myName}: alguien más junto a ${obj} en su zona`) };
     }
     case 'someone_in_area': {
@@ -255,8 +276,7 @@ function build(P, spec, owner) {
       const what = [spec.sex ? sexEs(spec.sex) : spec.attr ? `alguien con ${spec.attr}` : spec.group ? `alguien del grupo ${spec.group}` : 'alguien', onObj ? `sobre ${onObj}` : ''].filter(Boolean).join(' ');
       return { ...base, text: `${myName}: ${what} en su zona${spec.area ? ` (${spec.area})` : ''}`,
         unary: m ? (c => m(P.areaOf(c)) || m(P.rawAreaOf(c))) : null,
-        check: pos => { if (pos[me] < 0 || ps.some(k => pos[k] < 0)) return true; return ps.some(k => witness(pos[me], pos[k])); },
-        support: (pos, candOf) => existentialSupport(P, pos, candOf, me, ps, witness),
+        ...existential(P, me, ps, witness),
         revise: (st, emit) => existentialRevise(P, st, emit, me, ps, witness, `${myName}: ${what} en su zona`) };
     }
     case 'someone_exact_rows_beside': {
@@ -267,8 +287,7 @@ function build(P, spec, owner) {
       const tcells = P.freeCells().filter(d => P.besideObject(d, obj));
       return { ...base, text: `${myName}: alguien exactamente ${rows} filas ${sign < 0 ? 'al norte' : 'al sur'} estaba junto a ${obj}`,
         unary: c => tcells.some(d => P.row(d) === P.row(c) + sign * rows),
-        check: pos => { if (pos[me] < 0 || ps.some(k => pos[k] < 0)) return true; return ps.some(k => witness(pos[me], pos[k])); },
-        support: (pos, candOf) => existentialSupport(P, pos, candOf, me, ps, witness),
+        ...existential(P, me, ps, witness),
         revise: (st, emit) => {
           let ch = existentialRevise(P, st, emit, me, ps, witness, `${myName}: alguien junto a ${obj} ${rows} filas ${sign < 0 ? 'más al norte' : 'más al sur'}`);
           // all possible witness cells share a line? (even when me is not fixed yet)
@@ -276,13 +295,7 @@ function build(P, spec, owner) {
           const cells = tcells.filter(d => myRows.includes(P.row(d) - sign * rows));
           const pairs = []; for (const k of ps) for (const d of st.cand[k]) if (cells.includes(d)) pairs.push([k, d]);
           const ks = [...new Set(pairs.map(p => p[0]))], ds = [...new Set(pairs.map(p => p[1]))];
-          const cols = [...new Set(ds.map(P.col.bind(P)))];
-          if (ds.length && cols.length === 1) {
-            const names = ks.map(k => cname(P, k)).join('/');
-            for (let k = 0; k < st.cand.length; k++) { if (k === me) continue;
-              if (ks.includes(k)) ch = emit(k, d => P.col(d) !== cols[0] || ds.includes(d), `la columna ${cols[0]} la ocupa quien está junto a ${obj} (${names})`) || ch;
-              else ch = emit(k, d => P.col(d) !== cols[0], `la columna ${cols[0]} la ocupa quien está junto a ${obj} (${names})`) || ch; }
-          }
+          ch = lineOwnedBy(P, st, emit, me, ks, ds, DIMS(P).slice(1), (word, v, names) => `la ${word} ${v} la ocupa quien está junto a ${obj} (${names})`) || ch;
           return ch;
         } };
     }
@@ -376,4 +389,17 @@ function initialCandidates(P, constraints) {
   });
 }
 
-module.exports = { buildConstraints, initialCandidates };
+/**
+ * Initial state of both engines: candidate cells per character, restricted by the hypotheses
+ * [{ who, row?, col?, cell? }] ("what if X were in row 3?").
+ */
+function initialState(P, constraints, hypotheses = []) {
+  const cand = initialCandidates(P, constraints);
+  for (const h of hypotheses || []) {
+    const k = P.charIndex(h.who);
+    cand[k] = cand[k].filter(c => (h.row === undefined || P.row(c) === +h.row) && (h.col === undefined || P.col(c) === +h.col) && (h.cell === undefined || c === h.cell));
+  }
+  return { cand };
+}
+
+module.exports = { buildConstraints, initialState };

@@ -47,6 +47,11 @@ function parseArgs(argv) {
   return args;
 }
 
+/** Merge a translation file (sections with text keys only) into an official puzzle JSON. */
+function mergeTexts(json, texts) {
+  for (const sec of Object.keys(texts)) Object.assign(json[sec] = json[sec] || {}, texts[sec]);
+}
+
 function resolvePuzzle(ref, args) {
   const lang = args.lang || 'en';
   let file = ref;
@@ -62,13 +67,13 @@ function resolvePuzzle(ref, args) {
     const baseFile = path.join(path.dirname(file), `${base}.json`);
     if (!fs.existsSync(baseFile)) throw new Error(`${file} solo contiene textos; falta ${baseFile}`);
     const texts = json; json = JSON.parse(fs.readFileSync(baseFile, 'utf8'));
-    for (const sec of Object.keys(texts)) Object.assign(json[sec] = json[sec] || {}, texts[sec]);
+    mergeTexts(json, texts);
   }
   if (isOfficial(json)) {
     const annPath = args.annotations || path.join(ANNOT, `${base}.clues.json`);
     if (lang !== 'en') {
       const alt = path.join(path.dirname(file), `${base}-${lang}.json`);
-      if (fs.existsSync(alt)) { const j2 = JSON.parse(fs.readFileSync(alt, 'utf8')); for (const sec of Object.keys(j2)) Object.assign(json[sec] = json[sec] || {}, j2[sec]); }
+      if (fs.existsSync(alt)) mergeTexts(json, JSON.parse(fs.readFileSync(alt, 'utf8')));
       else console.error(`(aviso: no hay textos en "${lang}" en caché; usa "fetch ${base} --lang ${lang}")`);
     }
     const ann = fs.existsSync(annPath) ? JSON.parse(fs.readFileSync(annPath, 'utf8')) : {};
@@ -134,8 +139,9 @@ async function main() {
     return;
   }
   if (cmd === 'solve') {
-    const r = solve(P, { limit: +(args.limit || 2), hypotheses: parseHyps(args.hyp, P) });
-    console.log(`soluciones encontradas: ${r.solutions.length}${r.solutions.length >= +(args.limit || 2) ? ' (límite alcanzado)' : ''} · nodos: ${r.nodes}`);
+    const limit = +(args.limit || 2);
+    const r = solve(P, { limit, hypotheses: parseHyps(args.hyp, P) });
+    console.log(`soluciones encontradas: ${r.solutions.length}${r.solutions.length >= limit ? ' (límite alcanzado)' : ''} · nodos: ${r.nodes}`);
     r.solutions.forEach((s, i) => { console.log(`--- solución ${i + 1}`); console.log(describeSolution(P, s)); });
     if (r.solutions.length === 1 && P.meta.murdererIndex !== undefined && P.meta.murdererIndex !== null) {
       const m = murdererOf(P, r.solutions[0]);

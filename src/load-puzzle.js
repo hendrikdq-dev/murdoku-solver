@@ -2,7 +2,7 @@
 // Loader for the project's own puzzle format (JSON written by hand).
 // See puzzles/FORMAT.md for the description of the format.
 const fs = require('fs');
-const { Puzzle, normObj, defaultOccupiable } = require('./model');
+const { Puzzle, normObj, defaultOccupiable, cellIndex, doorCells, applyGroups } = require('./model');
 
 function parseCellKey(key) {
   const m1 = /^R(\d+)C(\d+)$/i.exec(key.trim());
@@ -33,11 +33,11 @@ function fromSpec(j) {
   for (const [key, name] of Object.entries(j.objects || {})) {
     const [r, c] = parseCellKey(key);
     if (r < 1 || r > height || c < 1 || c > width) throw new Error(`object outside grid: ${key}`);
-    objects[(r - 1) * width + (c - 1)] = normObj(name);
+    objects[cellIndex(r, c, width)] = normObj(name);
   }
   const occupiableNames = j.occupiable ? new Set(j.occupiable.map(normObj)) : defaultOccupiable();
   if (j.occupiableExtra) for (const e of j.occupiableExtra) occupiableNames.add(normObj(e));
-  const frontCells = (j.doors || []).map(pair => pair.map(([r, c]) => (r - 1) * width + (c - 1)));
+  const frontCells = doorCells(j.doors, width);
   const characters = (j.characters || []).map(ch => ({
     name: ch.name,
     sex: ch.sex ? ch.sex[0].toLowerCase() : null,            // 'm' | 'f' | null
@@ -46,11 +46,7 @@ function fromSpec(j) {
     clue: ch.clue || '',
     constraints: ch.constraints || [],
   }));
-  if (j.groups) for (const [g, members] of Object.entries(j.groups)) for (const m of members) {
-    const ch = characters.find(c => c.name.toLowerCase() === String(m).toLowerCase());
-    if (!ch) throw new Error(`group ${g}: unknown member ${m}`);
-    ch.attrs.add(g.toLowerCase());
-  }
+  applyGroups(characters, j.groups);
   return new Puzzle({
     name: j.name, objective: j.objective || (characters.some(c => c.role === 'treasure') ? 'treasure' : 'murder'),
     width, height, areaIds, areaNames, subareaOf, objects, occupiableNames, frontCells,

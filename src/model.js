@@ -33,7 +33,7 @@ class Puzzle {
     this._nameIndex = new Map(this.characters.map((ch, k) => [ch.name.toLowerCase(), k]));
   }
 
-  idx(r, c) { return (r - 1) * this.width + (c - 1); }
+  idx(r, c) { return cellIndex(r, c, this.width); }
   row(i) { return Math.floor(i / this.width) + 1; }
   col(i) { return (i % this.width) + 1; }
   label(i) { return `R${this.row(i)}C${this.col(i)}`; }
@@ -116,6 +116,21 @@ class Puzzle {
 /** Normalise an object name as used in puzzle files and clue specs. */
 function normObj(name) { return name == null ? null : String(name).trim().toLowerCase(); }
 
+/** 0-based cell index of a 1-based row/column in a grid of the given width. */
+function cellIndex(r, c, width) { return (r - 1) * width + (c - 1); }
+
+/** Pairs of cells in front of doors/windows, from [[r, c], [r, c]] pairs (1-based). */
+function doorCells(doors, width) { return (doors || []).map(pair => pair.map(([r, c]) => cellIndex(r, c, width))); }
+
+/** Add each group name as an attribute of its members (names matched case-insensitively). */
+function applyGroups(characters, groups) {
+  for (const [g, members] of Object.entries(groups || {})) for (const m of members) {
+    const ch = characters.find(c => c.name.toLowerCase() === String(m).toLowerCase());
+    if (!ch) throw new Error(`group ${g}: unknown member ${m}`);
+    ch.attrs.add(g.toLowerCase());
+  }
+}
+
 /** Default occupiable set: official table plus the generic ones used in hand-written puzzles. */
 function defaultOccupiable(extra = []) {
   const s = new Set();
@@ -124,4 +139,4 @@ function defaultOccupiable(extra = []) {
   return s;
 }
 
-module.exports = { Puzzle, normObj, defaultOccupiable };
+module.exports = { Puzzle, normObj, defaultOccupiable, cellIndex, doorCells, applyGroups };

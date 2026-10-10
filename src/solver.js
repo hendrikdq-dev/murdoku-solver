@@ -2,7 +2,7 @@
 // Exhaustive solver: depth-first search over candidate sets with full constraint propagation at
 // every node (same rules as the deduction engine, without explanations) and support checks for
 // the existential constraints. Used to prove uniqueness and to test hypotheses.
-const { buildConstraints, initialCandidates } = require('./clues');
+const { buildConstraints, initialState } = require('./clues');
 const { createPropagator, Contra } = require('./propagate');
 
 /**
@@ -15,11 +15,7 @@ function solve(P, opts = {}) {
   const constraints = opts.constraints || buildConstraints(P);
   const n = P.characters.length;
   const prop = createPropagator(P, constraints, opts);
-  const st0 = { cand: initialCandidates(P, constraints) };
-  for (const h of opts.hypotheses || []) {
-    const k = P.charIndex(h.who);
-    st0.cand[k] = st0.cand[k].filter(c => (h.row === undefined || P.row(c) === +h.row) && (h.col === undefined || P.col(c) === +h.col) && (h.cell === undefined || c === h.cell));
-  }
+  const st0 = initialState(P, constraints, opts.hypotheses);
   // the default check of a constraint is `() => true` (arity 0): only real checks are evaluated
   const withCheck = constraints.filter(c => typeof c.check === 'function' && c.check.length > 0);
   const withSupport = constraints.filter(c => c.support);
@@ -50,16 +46,21 @@ function solve(P, opts = {}) {
   return { solutions, nodes, constraints };
 }
 
+/** Victim of a murder puzzle and the persons sharing its area in a solution (null without victim). */
+function victimCompanions(P, sol) {
+  const victim = P.characters.findIndex(c => c.role === 'victim');
+  if (victim < 0) return null;
+  const area = P.areaOf(sol[victim]);
+  const companions = P.characters.map((c, k) => k).filter(k => k !== victim && P.isPerson(k) && P.areaOf(sol[k]) === area);
+  return { victim, area, companions };
+}
+
 /** Pretty description of a solution. */
 function describeSolution(P, sol) {
   const lines = P.characters.map((ch, k) => `${ch.name.padEnd(12)} ${P.label(sol[k]).padEnd(7)} ${P.areaNameOf(sol[k])}${P.objectAt(sol[k]) ? ' (' + P.objectAt(sol[k]) + ')' : ''}`);
   if (P.objective === 'murder') {
-    const v = P.characters.findIndex(c => c.role === 'victim');
-    if (v >= 0) {
-      const a = P.areaOf(sol[v]);
-      const m = P.characters.map((c, k) => k).filter(k => k !== v && P.isPerson(k) && P.areaOf(sol[k]) === a);
-      lines.push(`Asesino: ${m.map(k => P.characters[k].name).join(', ') || '?'} (a solas con ${P.characters[v].name} en ${P.areaName(a)})`);
-    }
+    const vc = victimCompanions(P, sol);
+    if (vc) lines.push(`Asesino: ${vc.companions.map(k => P.characters[k].name).join(', ') || '?'} (a solas con ${P.characters[vc.victim].name} en ${P.areaName(vc.area)})`);
   }
   if (P.objective === 'treasure') {
     const t = P.characters.findIndex(c => c.role === 'treasure');
@@ -70,11 +71,8 @@ function describeSolution(P, sol) {
 
 /** Index of the murderer in a solution of a murder puzzle (or -1). */
 function murdererOf(P, sol) {
-  const v = P.characters.findIndex(c => c.role === 'victim');
-  if (v < 0) return -1;
-  const a = P.areaOf(sol[v]);
-  const m = P.characters.map((c, k) => k).filter(k => k !== v && P.isPerson(k) && P.areaOf(sol[k]) === a);
-  return m.length === 1 ? m[0] : -1;
+  const vc = victimCompanions(P, sol);
+  return vc && vc.companions.length === 1 ? vc.companions[0] : -1;
 }
 
 module.exports = { solve, describeSolution, murdererOf };

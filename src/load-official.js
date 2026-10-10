@@ -4,7 +4,7 @@
 // own loader (puzzle-core bundle) on 10 Oct 2026: keys are `room_code_<x>_<y>` with x = column
 // and y = row (0-based). Clues are plain text; their logical encoding comes from an annotation file.
 const fs = require('fs');
-const { Puzzle, normObj, defaultOccupiable } = require('./model');
+const { Puzzle, normObj, defaultOccupiable, doorCells, applyGroups } = require('./model');
 const { BY_ID } = require('./objects');
 
 // Objects stored in one cell but drawn (and occupying) also the cell to the right / a 2x2 block.
@@ -63,7 +63,7 @@ function loadOfficialJson(json, annotations = {}, lang = 'en') {
     const m = /^room_windows_([hv])_(\d+)_(\d+)$/.exec(k);
     if (m && num(v)) edges.push({ kind: m[1], x: +m[2], y: +m[3], value: num(v) });
   }
-  const frontCells = (annotations.doors || []).map(pair => pair.map(([r, c]) => (r - 1) * w + (c - 1)));
+  const frontCells = doorCells(annotations.doors, w);
   // characters
   const total = num(P.total_chars) ?? num(P.total_char) ?? 0;
   const characters = [];
@@ -83,11 +83,7 @@ function loadOfficialJson(json, annotations = {}, lang = 'en') {
       official: { index: k, accessory: num(C[`char_accessory_${k}`]), hat: num(C[`char_hat_${k}`]) },
     });
   }
-  if (annotations.groups) for (const [g, members] of Object.entries(annotations.groups)) for (const m of members) {
-    const ch = characters.find(c => c.name.toLowerCase() === String(m).toLowerCase());
-    if (!ch) throw new Error(`group ${g}: unknown member ${m}`);
-    ch.attrs.add(g.toLowerCase());
-  }
+  applyGroups(characters, annotations.groups);
   const hints = [], solution = [];
   for (let i = 1; i <= 40; i++) { const t = P[`player_hint_${i}_${lang}`] ?? P[`player_hint_${i}_en`]; if (t) hints.push(t); }
   for (let i = 0; i < 40; i++) { const t = P[`solution_text_${lang.toUpperCase()}_${i}`] ?? P[`solution_text_EN_${i}`]; if (t) solution.push(t); }

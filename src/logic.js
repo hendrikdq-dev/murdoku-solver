@@ -2,7 +2,7 @@
 // Human-style deduction engine: propagation (see propagate.js) plus one-level "what if" hypotheses
 // chosen by shortest refutation. Produces an explained chain of deductions (Spanish) and, normally,
 // the full solution.
-const { buildConstraints, initialCandidates } = require('./clues');
+const { buildConstraints, initialState } = require('./clues');
 const { createPropagator, Contra } = require('./propagate');
 
 function explain(P, opts = {}) {
@@ -12,21 +12,16 @@ function explain(P, opts = {}) {
   const prop = createPropagator(P, constraints, opts);
   const name = k => P.characters[k].name;
   const S = c => P.label(c);
-  const isTreasure = k => P.characters[k].role === 'treasure';
   const solved = st => st.cand.every(a => a.length === 1);
 
-  const st = { cand: initialCandidates(P, constraints) };
-  for (const h of opts.hypotheses || []) {
-    const k = P.charIndex(h.who);
-    st.cand[k] = st.cand[k].filter(c => (h.row === undefined || P.row(c) === +h.row) && (h.col === undefined || P.col(c) === +h.col) && (h.cell === undefined || c === h.cell));
-  }
+  const st = initialState(P, constraints, opts.hypotheses);
   const steps = []; // {kind:'deduce'|'whatif', text, details?}
   let stuck = false, contradiction = null;
   try {
     const log0 = []; prop.propagate(st, log0);
     for (const l of log0) steps.push({ kind: 'deduce', text: l });
     while (!solved(st)) {
-      const order = []; for (let k = 0; k < n; k++) if (!isTreasure(k) && st.cand[k].length > 1 && st.cand[k].length <= maxWhatIf) order.push(k);
+      const order = []; for (let k = 0; k < n; k++) if (P.isPerson(k) && st.cand[k].length > 1 && st.cand[k].length <= maxWhatIf) order.push(k);
       let best = null;
       for (const k of order) for (const cell of st.cand[k]) {
         const t = prop.clone(st); t.cand[k] = [cell]; const sub = [];
