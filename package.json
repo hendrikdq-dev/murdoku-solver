@@ -1,6 +1,6 @@
 {
   "name": "murdoku-solver",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Solucionador, motor de deducción explicada y herramientas de pistas para puzles Murdoku (Sudoku + misterio de asesinato)",
   "license": "MIT",
   "private": true,

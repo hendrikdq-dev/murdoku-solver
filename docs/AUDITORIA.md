@@ -5,6 +5,27 @@
 - **Método:** lectura completa del código; `node --test --experimental-test-coverage` en tres escenarios (máquina de desarrollo con `private/` y `cache/`, solo `cache/`, y copia limpia del repo en un directorio temporal); búsquedas con `git grep` para confirmar símbolos sin uso; reproducción de tres casos límite con el CLI y con `node -e`.
 - **Tamaño:** 1 525 líneas de código (≈ 115 KB), sin dependencias externas, 4 tests.
 
+## Estado tras las acciones (10-10-2026, versión 0.2.0)
+
+Las diez acciones se ejecutaron el mismo día, con un commit por acción, más dos tareas surgidas durante el trabajo. Resultado medido en una copia limpia del repo: 46 tests, 98,4 % de líneas, 92,4 % de ramas y 97,1 % de funciones (antes: 4 tests, 62,8 / 66,0 / 48,0). Las secciones que siguen describen el estado del código en el commit 9e252cf, anterior a las acciones.
+
+| nº | acción | estado | commit |
+|---:|---|---|---|
+| 1 | Tests de oráculo para todos los tipos de pista; `puzzles/examples/faro-tesoro.json`; tests de la salida textual | hecha | 35cbc18 |
+| 2 | Los errores de programación dentro de un `revise` dejan de ser contradicciones | hecha | eb755b7 |
+| 3 | CI en GitHub Actions: Node 20 y 22 en Ubuntu, Node 22 en Windows; lint, formato y umbral de cobertura | hecha | 5fb66e8, 163691d |
+| 1b | Fixture sintética en formato oficial para cubrir el cargador sin distribuir puzles de terceros | nueva, hecha | 6baca49 |
+| 4 | Código muerto, incluidas `beside` con `who`, `same_row` y `same_col` (insatisfacibles) | hecha | ac0cefd |
+| 6 | Deduplicación: estado inicial e hipótesis, asesino, grupos, puertas, patrones de `check`, línea ocupada | hecha | 6e97045 |
+| 5, 7, 10a | Validación con mensajes claros, avisos por `stderr`, `cli.js` importable y con tests | hechas | 937fb68 |
+| 9 | `src/clues/` por familias con el contrato documentado; eventos estructurados en lugar de parsear el log | hecha | 89a4a22 |
+| 10b | `--cache` / `MURDOKU_CACHE`, `fetch` global con tiempo límite, `"private": true` | hecha | 00d2008 |
+| 8 | Prettier, ESLint, `.editorconfig`, renombrados (`props`/`grid`/`chars`, `changed`), `??` en valores por defecto | hecha | 163691d |
+
+Hallazgos nuevos durante el trabajo: `beside` con `who`, `same_row` y `same_col` eran insatisfacibles con la regla de una persona por fila y columna, y se han retirado; el texto de confinamiento decía "está seguro" también para personajes femeninos, ahora "tiene que estar en"; el cargador oficial fallaba con un error de grupos, en vez de avisar, cuando el JSON no traía `total_chars`.
+
+Queda fuera a propósito: `tools/overlay.ps1` sigue siendo solo para Windows y duplica la especificación del renderizador SVG, y `objects.js` conserva el campo `file` por si algún día se renderizan los iconos oficiales.
+
 ---
 
 ## 1. Arquitectura real
