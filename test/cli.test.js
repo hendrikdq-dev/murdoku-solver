@@ -115,6 +115,12 @@ test('official puzzles: annotations option, translation files, language check an
   assert.strictEqual(P3.name, 'Mansión sintética');
   assert.strictEqual(P3.characters.length, 4);
   await rejects(['info', OFFICIAL, '--lang', 'xx'], /idioma no válido: "xx"/);
+  // slug lookup in the cache directory: --cache option or MURDOKU_CACHE
+  assert.strictEqual(resolvePuzzle('puzzle-synthetic-manor', { cache: FIX, annotations: ANN }).name, 'Synthetic Manor');
+  process.env.MURDOKU_CACHE = FIX;
+  try { assert.strictEqual(resolvePuzzle('puzzle-synthetic-manor', { annotations: ANN }).characters.length, 4); }
+  finally { delete process.env.MURDOKU_CACHE; }
+  await rejects(['info', 'puzzle-synthetic-manor', '--cache', path.join(FIX, 'nowhere')], /No encuentro el puzle "puzzle-synthetic-manor" \(ni fichero ni .*nowhere/);
   const r = await run('solve', OFFICIAL, '--annotations', ANN);
   assert.match(r.out, /✔ coincide con el asesino oficial \(Leo\)/);
   assert.match(r.err, /^aviso: código de objeto desconocido 999 en R4C3/m);

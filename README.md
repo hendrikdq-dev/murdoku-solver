@@ -9,7 +9,8 @@ Sin dependencias: solo Node.js 20 o superior.
 ## Uso rápido
 
 ```bash
-# descargar un puzle oficial de murdoku.com/play (el slug es el de la URL del JSON)
+# descargar un puzle oficial de murdoku.com/play (el slug es el de la URL del JSON); la caché es cache/official/
+# en el repositorio, o la que indiques con --cache dir o la variable MURDOKU_CACHE
 node src/cli.js fetch preppers-medium
 node src/cli.js fetch preppers-medium --lang es     # textos en español
 

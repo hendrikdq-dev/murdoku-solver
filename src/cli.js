@@ -4,7 +4,6 @@
 // runs a command with injectable output functions (used by the tests).
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
 const { loadPuzzle } = require('./load-puzzle');
 const { loadOfficialJson } = require('./load-official');
 const { buildConstraints } = require('./clues');
@@ -13,13 +12,16 @@ const { explain, formatSteps, milestones } = require('./logic');
 const { renderSvg } = require('./render-svg');
 
 const ROOT = path.resolve(__dirname, '..');
-const CACHE = path.join(ROOT, 'cache', 'official');
 const ANNOT = path.join(ROOT, 'puzzles', 'annotations');
 const LANGS = ['en', 'es', 'fr', 'pt', 'de', 'it', 'nl'];
+const FETCH_TIMEOUT_MS = 20000;
+
+/** Directory of the cached official JSON files: --cache, $MURDOKU_CACHE or <repo>/cache/official. */
+function cacheDir(args) { return args.cache || process.env.MURDOKU_CACHE || path.join(ROOT, 'cache', 'official'); }
 
 const USAGE = `murdoku — herramientas para puzles Murdoku
 
-  node src/cli.js fetch <slug> [--lang es]      descarga el JSON oficial de murdoku.com/play a cache/official/
+  node src/cli.js fetch <slug> [--lang es]      descarga el JSON oficial de murdoku.com/play a la caché
                                                 (slug como en la URL: p. ej. preppers-medium, the-zoo-expert)
   node src/cli.js info <puzle>                  resumen: zonas, objetos, personajes y pistas (y si están codificadas)
   node src/cli.js clues <puzle>                 pistas de cada personaje y su codificación lógica
@@ -32,13 +34,14 @@ const USAGE = `murdoku — herramientas para puzles Murdoku
                                                 dibuja el tablero en SVG
 
 <puzle> puede ser: un fichero JSON en formato propio (ver puzzles/FORMAT.md), un fichero JSON oficial,
-o el slug de un puzle ya descargado en cache/official/. Para los oficiales se buscan las pistas codificadas
-en puzzles/annotations/<slug>.clues.json (o en --annotations f). Opción común: --lang en|es (textos de los
-puzles oficiales). Los avisos sobre el puzle (objetos desconocidos, víctima deducida del texto...) van a stderr.
+o el slug de un puzle ya descargado en la caché. Para los oficiales se buscan las pistas codificadas en
+puzzles/annotations/<slug>.clues.json (o en --annotations f). Opciones comunes: --lang en|es (textos de los
+puzles oficiales) y --cache dir (caché de JSON oficiales; por defecto $MURDOKU_CACHE o cache/official/ en
+el repositorio). Los avisos sobre el puzle (objetos desconocidos, víctima deducida del texto...) van a stderr.
 `;
 
 // --name value | --name (flag) | --hyp value (repeatable)
-const OPTIONS = { lang: 'value', limit: 'value', out: 'value', annotations: 'value', overlay: 'value', crop: 'value', hyp: 'list', solution: 'flag', legend: 'flag', brief: 'flag' };
+const OPTIONS = { lang: 'value', cache: 'value', limit: 'value', out: 'value', annotations: 'value', overlay: 'value', crop: 'value', hyp: 'list', solution: 'flag', legend: 'flag', brief: 'flag' };
 
 function parseArgs(argv) {
   const args = { _: [], hyp: [] };
@@ -81,8 +84,9 @@ function resolvePuzzle(ref, args, warn = console.error) {
   if (!LANGS.includes(lang)) throw new Error(`idioma no válido: "${lang}" (${LANGS.join(', ')})`);
   let file = ref;
   if (!fs.existsSync(file)) {
-    if (fs.existsSync(path.join(CACHE, `${ref}.json`))) file = path.join(CACHE, `${ref}.json`);
-    else throw new Error(`No encuentro el puzle "${ref}" (ni fichero ni cache/official/${ref}.json; usa "fetch ${ref}")`);
+    const cached = path.join(cacheDir(args), `${ref}.json`);
+    if (fs.existsSync(cached)) file = cached;
+    else throw new Error(`No encuentro el puzle "${ref}" (ni fichero ni ${cached}; usa "fetch ${ref}")`);
   }
   let json = readJson(file);
   const isOfficial = j => j && j.PROPERTIES && j.GRID;
@@ -110,13 +114,12 @@ function resolvePuzzle(ref, args, warn = console.error) {
   return loadPuzzle(file);
 }
 
-function fetchUrl(url) {
-  return new Promise((resolve, reject) => {
-    https.get(url, res => {
-      if (res.statusCode !== 200) { res.resume(); return reject(new Error(`HTTP ${res.statusCode} ${url}`)); }
-      const chunks = []; res.on('data', d => chunks.push(d)); res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-    }).on('error', reject);
-  });
+async function fetchText(url) {
+  let res;
+  try { res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), headers: { accept: 'application/json' } }); }
+  catch (e) { throw new Error(`no se pudo descargar ${url}: ${e.name === 'TimeoutError' ? `sin respuesta en ${FETCH_TIMEOUT_MS / 1000} s` : e.message}`); }
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`);
+  return res.text();
 }
 
 /** --hyp Nombre=fila,col (either may be *) -> { who, row?, col? }, validated against the puzzle. */
@@ -150,11 +153,12 @@ async function main(argv, io = {}) {
     if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) throw new Error(`slug no válido: "${slug}" (minúsculas, dígitos y guiones, como en la URL)`);
     const lang = args.lang || 'en';
     if (!LANGS.includes(lang)) throw new Error(`idioma no válido: "${lang}" (${LANGS.join(', ')})`);
-    fs.mkdirSync(CACHE, { recursive: true });
+    const cache = cacheDir(args);
+    fs.mkdirSync(cache, { recursive: true });
     const url = lang === 'en' ? `https://murdoku.com/play_puzzles/en/puzzle-${slug}.json` : `https://murdoku.com/play_puzzles/${lang}/puzzle-${slug}-${lang}.json`;
-    const body = await fetchUrl(url);
+    const body = await fetchText(url);
     try { JSON.parse(body); } catch (e) { throw new Error(`la respuesta de ${url} no es JSON (${e.message})`); }
-    const out = path.join(CACHE, lang === 'en' ? `${slug}.json` : `${slug}-${lang}.json`);
+    const out = path.join(cache, lang === 'en' ? `${slug}.json` : `${slug}-${lang}.json`);
     fs.writeFileSync(out, body);
     log(`guardado ${out} (${body.length} bytes)`);
     return;
