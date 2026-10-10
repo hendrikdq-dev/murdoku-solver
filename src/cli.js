@@ -17,7 +17,9 @@ const LANGS = ['en', 'es', 'fr', 'pt', 'de', 'it', 'nl'];
 const FETCH_TIMEOUT_MS = 20000;
 
 /** Directory of the cached official JSON files: --cache, $MURDOKU_CACHE or <repo>/cache/official. */
-function cacheDir(args) { return args.cache || process.env.MURDOKU_CACHE || path.join(ROOT, 'cache', 'official'); }
+function cacheDir(args) {
+  return args.cache || process.env.MURDOKU_CACHE || path.join(ROOT, 'cache', 'official');
+}
 
 const USAGE = `murdoku — herramientas para puzles Murdoku
 
@@ -41,27 +43,55 @@ el repositorio). Los avisos sobre el puzle (objetos desconocidos, víctima deduc
 `;
 
 // --name value | --name (flag) | --hyp value (repeatable)
-const OPTIONS = { lang: 'value', cache: 'value', limit: 'value', out: 'value', annotations: 'value', overlay: 'value', crop: 'value', hyp: 'list', solution: 'flag', legend: 'flag', brief: 'flag' };
+const OPTIONS = {
+  lang: 'value',
+  cache: 'value',
+  limit: 'value',
+  out: 'value',
+  annotations: 'value',
+  overlay: 'value',
+  crop: 'value',
+  hyp: 'list',
+  solution: 'flag',
+  legend: 'flag',
+  brief: 'flag',
+};
 
 function parseArgs(argv) {
   const args = { _: [], hyp: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (!a.startsWith('--')) { args._.push(a); continue; }
-    const key = a.slice(2), kind = OPTIONS[key];
+    if (!a.startsWith('--')) {
+      args._.push(a);
+      continue;
+    }
+    const key = a.slice(2),
+      kind = OPTIONS[key];
     if (!kind) throw new Error(`opción desconocida: ${a}`);
-    if (kind === 'flag') { args[key] = true; continue; }
+    if (kind === 'flag') {
+      args[key] = true;
+      continue;
+    }
     const v = argv[++i];
     if (v === undefined || v.startsWith('--')) throw new Error(`falta el valor de ${a}`);
-    if (kind === 'list') args.hyp.push(v); else args[key] = v;
+    if (kind === 'list') args.hyp.push(v);
+    else args[key] = v;
   }
   return args;
 }
 
 function readJson(file) {
   let text;
-  try { text = fs.readFileSync(file, 'utf8'); } catch (e) { throw new Error(`no se puede leer ${file}: ${e.message}`); }
-  try { return JSON.parse(text); } catch (e) { throw new Error(`${file}: JSON mal formado (${e.message})`); }
+  try {
+    text = fs.readFileSync(file, 'utf8');
+  } catch (e) {
+    throw new Error(`no se puede leer ${file}: ${e.message}`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new Error(`${file}: JSON mal formado (${e.message})`);
+  }
 }
 
 function parseInteger(value, option, min = 1) {
@@ -72,7 +102,7 @@ function parseInteger(value, option, min = 1) {
 
 /** Merge a translation file (sections holding only texts) into an official puzzle JSON. */
 function mergeTexts(json, texts) {
-  for (const sec of Object.keys(texts)) Object.assign(json[sec] = json[sec] || {}, texts[sec]);
+  for (const sec of Object.keys(texts)) Object.assign((json[sec] = json[sec] || {}), texts[sec]);
 }
 
 /**
@@ -95,7 +125,8 @@ function resolvePuzzle(ref, args, warn = console.error) {
   if (isOfficial(json) && !json.PROPERTIES.grid_w) {
     const baseFile = path.join(path.dirname(file), `${base}.json`);
     if (!fs.existsSync(baseFile)) throw new Error(`${file} solo contiene textos; falta ${baseFile}`);
-    const texts = json; json = readJson(baseFile);
+    const texts = json;
+    json = readJson(baseFile);
     mergeTexts(json, texts);
   }
   if (isOfficial(json)) {
@@ -110,14 +141,20 @@ function resolvePuzzle(ref, args, warn = console.error) {
     P.meta.annotationsPath = annPath;
     return P;
   }
-  if (!json || typeof json !== 'object' || !Array.isArray(json.areas)) throw new Error(`${file}: no parece un puzle (ni formato propio con "areas" ni JSON oficial con PROPERTIES/GRID)`);
+  if (!json || typeof json !== 'object' || !Array.isArray(json.areas))
+    throw new Error(`${file}: no parece un puzle (ni formato propio con "areas" ni JSON oficial con PROPERTIES/GRID)`);
   return loadPuzzle(file);
 }
 
 async function fetchText(url) {
   let res;
-  try { res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), headers: { accept: 'application/json' } }); }
-  catch (e) { throw new Error(`no se pudo descargar ${url}: ${e.name === 'TimeoutError' ? `sin respuesta en ${FETCH_TIMEOUT_MS / 1000} s` : e.message}`); }
+  try {
+    res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), headers: { accept: 'application/json' } });
+  } catch (e) {
+    throw new Error(
+      `no se pudo descargar ${url}: ${e.name === 'TimeoutError' ? `sin respuesta en ${FETCH_TIMEOUT_MS / 1000} s` : e.message}`
+    );
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`);
   return res.text();
 }
@@ -129,8 +166,14 @@ function parseHyps(list, P) {
     if (!m) throw new Error(`hipótesis mal formada: ${h} (usa Nombre=fila,col; fila o col pueden ser *)`);
     if (m[2] === '*' && m[3] === '*') throw new Error(`hipótesis ${h}: fila y columna no pueden ser las dos *`);
     const out = { who: P.characters[P.charIndex(m[1])].name };
-    if (m[2] !== '*') { out.row = +m[2]; if (out.row < 1 || out.row > P.height) throw new Error(`hipótesis ${h}: fila fuera de rango (1-${P.height})`); }
-    if (m[3] !== '*') { out.col = +m[3]; if (out.col < 1 || out.col > P.width) throw new Error(`hipótesis ${h}: columna fuera de rango (1-${P.width})`); }
+    if (m[2] !== '*') {
+      out.row = +m[2];
+      if (out.row < 1 || out.row > P.height) throw new Error(`hipótesis ${h}: fila fuera de rango (1-${P.height})`);
+    }
+    if (m[3] !== '*') {
+      out.col = +m[3];
+      if (out.col < 1 || out.col > P.width) throw new Error(`hipótesis ${h}: columna fuera de rango (1-${P.width})`);
+    }
     return out;
   });
 }
@@ -139,85 +182,164 @@ function parseCrop(value, P) {
   const parts = value.split(',');
   if (parts.length !== 4) throw new Error(`--crop debe ser r1,c1,r2,c2 (recibido "${value}")`);
   const [r1, c1, r2, c2] = parts.map(x => parseInteger(x, '--crop'));
-  if (r1 > r2 || c1 > c2 || r2 > P.height || c2 > P.width) throw new Error(`--crop fuera del tablero o invertido: filas 1-${P.height}, columnas 1-${P.width}`);
+  if (r1 > r2 || c1 > c2 || r2 > P.height || c2 > P.width)
+    throw new Error(`--crop fuera del tablero o invertido: filas 1-${P.height}, columnas 1-${P.width}`);
   return [r1, c1, r2, c2];
 }
 
 async function main(argv, io = {}) {
-  const log = io.log || console.log, warn = io.warn || console.error;
+  const log = io.log || console.log,
+    warn = io.warn || console.error;
   const args = parseArgs(argv);
   const cmd = args._[0];
-  if (!cmd || cmd === 'help') { log(USAGE); return; }
+  if (!cmd || cmd === 'help') {
+    log(USAGE);
+    return;
+  }
   if (cmd === 'fetch') {
-    const slug = args._[1]; if (!slug) throw new Error('falta el slug');
-    if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) throw new Error(`slug no válido: "${slug}" (minúsculas, dígitos y guiones, como en la URL)`);
+    const slug = args._[1];
+    if (!slug) throw new Error('falta el slug');
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(slug))
+      throw new Error(`slug no válido: "${slug}" (minúsculas, dígitos y guiones, como en la URL)`);
     const lang = args.lang || 'en';
     if (!LANGS.includes(lang)) throw new Error(`idioma no válido: "${lang}" (${LANGS.join(', ')})`);
     const cache = cacheDir(args);
     fs.mkdirSync(cache, { recursive: true });
-    const url = lang === 'en' ? `https://murdoku.com/play_puzzles/en/puzzle-${slug}.json` : `https://murdoku.com/play_puzzles/${lang}/puzzle-${slug}-${lang}.json`;
+    const url =
+      lang === 'en'
+        ? `https://murdoku.com/play_puzzles/en/puzzle-${slug}.json`
+        : `https://murdoku.com/play_puzzles/${lang}/puzzle-${slug}-${lang}.json`;
     const body = await fetchText(url);
-    try { JSON.parse(body); } catch (e) { throw new Error(`la respuesta de ${url} no es JSON (${e.message})`); }
+    try {
+      JSON.parse(body);
+    } catch (e) {
+      throw new Error(`la respuesta de ${url} no es JSON (${e.message})`);
+    }
     const out = path.join(cache, lang === 'en' ? `${slug}.json` : `${slug}-${lang}.json`);
     fs.writeFileSync(out, body);
     log(`guardado ${out} (${body.length} bytes)`);
     return;
   }
-  const ref = args._[1]; if (!ref) throw new Error('falta el puzle');
+  const ref = args._[1];
+  if (!ref) throw new Error('falta el puzle');
   const P = resolvePuzzle(ref, args, warn);
   for (const w of P.meta.warnings || []) warn(`aviso: ${w}`);
   const encoded = P.characters.filter(c => c.constraints.length || c.role !== 'suspect').length;
   if (cmd === 'info') {
     log(`${P.name} — ${P.width}x${P.height}, ${P.characters.length} personajes, objetivo: ${P.objective}`);
-    log('Zonas: ' + P.mainAreaIds().map(id => `${P.areaName(id)} (${P.cellsOfArea(id).length})`).join(' · '));
-    const objs = {}; for (let i = 0; i < P.n; i++) { const o = P.objectAt(i); if (o) (objs[o] = objs[o] || []).push(P.label(i)); }
-    log('Objetos: ' + Object.entries(objs).map(([o, cells]) => `${o}${P.occupiableNames.has(o) ? '*' : ''} ×${cells.length}`).join(' · ') + '   (* = se puede ocupar)');
-    if (P.frontCells.length) log('Frente a puertas: ' + P.frontCells.map(p => p.map(c => P.label(c)).join('/')).join(' · '));
+    log(
+      'Zonas: ' +
+        P.mainAreaIds()
+          .map(id => `${P.areaName(id)} (${P.cellsOfArea(id).length})`)
+          .join(' · ')
+    );
+    const objs = {};
+    for (let i = 0; i < P.n; i++) {
+      const o = P.objectAt(i);
+      if (o) (objs[o] = objs[o] || []).push(P.label(i));
+    }
+    log(
+      'Objetos: ' +
+        Object.entries(objs)
+          .map(([o, cells]) => `${o}${P.occupiableNames.has(o) ? '*' : ''} ×${cells.length}`)
+          .join(' · ') +
+        '   (* = se puede ocupar)'
+    );
+    if (P.frontCells.length)
+      log('Frente a puertas: ' + P.frontCells.map(p => p.map(c => P.label(c)).join('/')).join(' · '));
     if (P.meta.customRules && P.meta.customRules.length) log('Reglas extra: ' + P.meta.customRules.join(' | '));
-    log(`Pistas codificadas: ${encoded}/${P.characters.length}${P.meta.annotationsPath ? ` (fichero: ${path.relative(ROOT, P.meta.annotationsPath)})` : ''}`);
-    if (P.meta.hints) log(`Pistas oficiales: ${P.meta.hints.length} · texto de solución oficial: ${P.meta.solution.length} líneas · índice del asesino: ${P.meta.murdererIndex}`);
+    log(
+      `Pistas codificadas: ${encoded}/${P.characters.length}${P.meta.annotationsPath ? ` (fichero: ${path.relative(ROOT, P.meta.annotationsPath)})` : ''}`
+    );
+    if (P.meta.hints)
+      log(
+        `Pistas oficiales: ${P.meta.hints.length} · texto de solución oficial: ${P.meta.solution.length} líneas · índice del asesino: ${P.meta.murdererIndex}`
+      );
     return;
   }
   if (cmd === 'clues') {
     // the constraint texts are the Spanish reading of the encoding; building them also validates it
     const texts = new Map();
     const strip = (t, name) => (t.startsWith(`${name}: `) ? t.slice(name.length + 2) : t);
-    for (const c of buildConstraints(P)) if (c.text) (texts.get(c.owner) || texts.set(c.owner, []).get(c.owner)).push(c.owner === null ? c.text : strip(c.text, P.characters[c.owner].name));
+    for (const c of buildConstraints(P))
+      if (c.text)
+        (texts.get(c.owner) || texts.set(c.owner, []).get(c.owner)).push(
+          c.owner === null ? c.text : strip(c.text, P.characters[c.owner].name)
+        );
     P.characters.forEach((ch, k) => {
-      log(`${ch.name} [${ch.sex || '?'}${ch.attrs.size ? ' ' + [...ch.attrs].join(',') : ''}${ch.role !== 'suspect' ? ' ' + ch.role : ''}]: ${ch.clue}`);
-      if (ch.constraints.length) { log(`    ${(texts.get(k) || []).join(' · ')}`); log(`    ${JSON.stringify(ch.constraints)}`); }
-      else if (ch.role === 'suspect') log('    (sin codificar)');
+      log(
+        `${ch.name} [${ch.sex || '?'}${ch.attrs.size ? ' ' + [...ch.attrs].join(',') : ''}${ch.role !== 'suspect' ? ' ' + ch.role : ''}]: ${ch.clue}`
+      );
+      if (ch.constraints.length) {
+        log(`    ${(texts.get(k) || []).join(' · ')}`);
+        log(`    ${JSON.stringify(ch.constraints)}`);
+      } else if (ch.role === 'suspect') log('    (sin codificar)');
     });
-    if (P.global.length) { log('\nReglas globales:'); for (const t of texts.get(null) || []) log(`  · ${t}`); }
-    if (P.meta.hints && P.meta.hints.length) { log('\nPistas oficiales:'); P.meta.hints.forEach((h, i) => log(`  ${i + 1}. ${h}`)); }
+    if (P.global.length) {
+      log('\nReglas globales:');
+      for (const t of texts.get(null) || []) log(`  · ${t}`);
+    }
+    if (P.meta.hints && P.meta.hints.length) {
+      log('\nPistas oficiales:');
+      P.meta.hints.forEach((h, i) => log(`  ${i + 1}. ${h}`));
+    }
     return;
   }
   if (cmd === 'solve') {
     const limit = args.limit === undefined ? 2 : parseInteger(args.limit, '--limit');
     const r = solve(P, { limit, hypotheses: parseHyps(args.hyp, P) });
-    log(`soluciones encontradas: ${r.solutions.length}${r.solutions.length >= limit ? ' (límite alcanzado)' : ''} · nodos: ${r.nodes}`);
-    r.solutions.forEach((s, i) => { log(`--- solución ${i + 1}`); log(describeSolution(P, s)); });
+    log(
+      `soluciones encontradas: ${r.solutions.length}${r.solutions.length >= limit ? ' (límite alcanzado)' : ''} · nodos: ${r.nodes}`
+    );
+    r.solutions.forEach((s, i) => {
+      log(`--- solución ${i + 1}`);
+      log(describeSolution(P, s));
+    });
     if (r.solutions.length === 1 && P.meta.murdererIndex !== undefined && P.meta.murdererIndex !== null) {
       const m = murdererOf(P, r.solutions[0]);
-      log(m === P.meta.murdererIndex ? `✔ coincide con el asesino oficial (${P.characters[m].name})` : `✘ NO coincide con el asesino oficial (índice ${P.meta.murdererIndex} = ${P.characters[P.meta.murdererIndex] && P.characters[P.meta.murdererIndex].name})`);
+      log(
+        m === P.meta.murdererIndex
+          ? `✔ coincide con el asesino oficial (${P.characters[m].name})`
+          : `✘ NO coincide con el asesino oficial (índice ${P.meta.murdererIndex} = ${P.characters[P.meta.murdererIndex] && P.characters[P.meta.murdererIndex].name})`
+      );
     }
     return;
   }
   if (cmd === 'explain' || cmd === 'hints') {
     const e = explain(P, { hypotheses: parseHyps(args.hyp, P) });
-    const text = cmd === 'hints' ? milestones(e).map((m, i) => `${i + 1}. ${m}`).join('\n') : formatSteps(e, { details: !args.brief });
-    const status = e.solved ? 'resuelto' : e.contradiction ? 'contradicción: ' + e.contradiction : 'atascado (sin hipótesis refutables de un nivel)';
-    if (args.out) { fs.writeFileSync(args.out, text + '\n'); log(`escrito ${args.out} · ${e.steps.length} pasos · ${status}`); }
-    else { log(text); log(`\n${e.steps.length} pasos · ${status}`); }
+    const text =
+      cmd === 'hints'
+        ? milestones(e)
+            .map((m, i) => `${i + 1}. ${m}`)
+            .join('\n')
+        : formatSteps(e, { details: !args.brief });
+    const status = e.solved
+      ? 'resuelto'
+      : e.contradiction
+        ? 'contradicción: ' + e.contradiction
+        : 'atascado (sin hipótesis refutables de un nivel)';
+    if (args.out) {
+      fs.writeFileSync(args.out, text + '\n');
+      log(`escrito ${args.out} · ${e.steps.length} pasos · ${status}`);
+    } else {
+      log(text);
+      log(`\n${e.steps.length} pasos · ${status}`);
+    }
     return;
   }
   if (cmd === 'render') {
     const opts = { legend: !!args.legend, title: P.name };
     if (args.crop) opts.crop = parseCrop(args.crop, P);
     if (args.overlay) opts.overlay = readJson(args.overlay);
-    if (args.solution) { const r = solve(P, { limit: 1 }); if (!r.solutions.length) throw new Error('sin solución'); opts.placements = Object.fromEntries(P.characters.map((c, k) => [c.name, r.solutions[0][k]])); }
+    if (args.solution) {
+      const r = solve(P, { limit: 1 });
+      if (!r.solutions.length) throw new Error('sin solución');
+      opts.placements = Object.fromEntries(P.characters.map((c, k) => [c.name, r.solutions[0][k]]));
+    }
     const svg = renderSvg(P, opts);
-    const out = args.out || path.join(ROOT, 'out', `${path.basename(ref).replace(/\.json$/, '')}${args.solution ? '-solucion' : ''}.svg`);
+    const out =
+      args.out ||
+      path.join(ROOT, 'out', `${path.basename(ref).replace(/\.json$/, '')}${args.solution ? '-solucion' : ''}.svg`);
     fs.mkdirSync(path.dirname(out), { recursive: true });
     fs.writeFileSync(out, svg);
     log(`escrito ${out}`);
@@ -226,6 +348,10 @@ async function main(argv, io = {}) {
   throw new Error(`comando desconocido: ${cmd}\n${USAGE}`);
 }
 
-if (require.main === module) main(process.argv.slice(2)).catch(e => { console.error('Error:', e.message); process.exit(1); });
+if (require.main === module)
+  main(process.argv.slice(2)).catch(e => {
+    console.error('Error:', e.message);
+    process.exit(1);
+  });
 
 module.exports = { parseArgs, parseHyps, parseCrop, readJson, resolvePuzzle, main, USAGE };

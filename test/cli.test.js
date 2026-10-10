@@ -16,14 +16,19 @@ const OFFICIAL = path.join(FIX, 'puzzle-synthetic-manor.json');
 const ANN = path.join(FIX, 'synthetic-manor.clues.json');
 
 async function run(...argv) {
-  const out = [], err = [];
+  const out = [],
+    err = [];
   await main(argv, { log: (...a) => out.push(a.join(' ')), warn: (...a) => err.push(a.join(' ')) });
   return { out: out.join('\n'), err: err.join('\n') };
 }
 const rejects = (argv, re) => assert.rejects(() => run(...argv), re);
 const withTempDir = async fn => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'murdoku-cli-'));
-  try { await fn(dir); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  try {
+    await fn(dir);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 };
 
 test('parseArgs: positionals, values, flags, repeatable --hyp, and errors', () => {
@@ -36,7 +41,10 @@ test('parseArgs: positionals, values, flags, repeatable --hyp, and errors', () =
 
 test('parseHyps and parseCrop validate against the puzzle', () => {
   const P = loadPuzzle(TOY);
-  assert.deepStrictEqual(parseHyps(['clara=1,*', 'Dani=*,4'], P), [{ who: 'Clara', row: 1 }, { who: 'Dani', col: 4 }]);
+  assert.deepStrictEqual(parseHyps(['clara=1,*', 'Dani=*,4'], P), [
+    { who: 'Clara', row: 1 },
+    { who: 'Dani', col: 4 },
+  ]);
   assert.throws(() => parseHyps(['Clara=9,1'], P), /fila fuera de rango \(1-4\)/);
   assert.throws(() => parseHyps(['Clara=1,0'], P), /columna fuera de rango \(1-4\)/);
   assert.throws(() => parseHyps(['Clara=*,*'], P), /no pueden ser las dos \*/);
@@ -56,9 +64,11 @@ test('help, unknown command, missing puzzle, malformed JSON', async () => {
   await rejects(['solve'], /falta el puzle/);
   await rejects(['solve', 'no-existe'], /No encuentro el puzle "no-existe"/);
   await withTempDir(async dir => {
-    const bad = path.join(dir, 'bad.json'); fs.writeFileSync(bad, '{ "areas": [');
+    const bad = path.join(dir, 'bad.json');
+    fs.writeFileSync(bad, '{ "areas": [');
     await rejects(['info', bad], /bad\.json: JSON mal formado/);
-    const notPuzzle = path.join(dir, 'x.json'); fs.writeFileSync(notPuzzle, '{"hello": 1}');
+    const notPuzzle = path.join(dir, 'x.json');
+    fs.writeFileSync(notPuzzle, '{"hello": 1}');
     await rejects(['info', notPuzzle], /no parece un puzle/);
   });
 });
@@ -68,13 +78,16 @@ test('info, clues, solve, explain, hints on the example puzzles', async () => {
   assert.match(info, /^Ejemplo de juguete \(4x4\) — 4x4, 4 personajes, objetivo: murder$/m);
   assert.match(info, /^Pistas codificadas: 4\/4$/m);
   const clues = (await run('clues', FARO)).out;
-  assert.match(clues, /^Marina \[f\]: Estaba en el Faro, junto a una cama\.\n    en Faro · junto a bed\n    \[/m);
+  assert.match(clues, /^Marina \[f\]: Estaba en el Faro, junto a una cama\.\n {4}en Faro · junto a bed\n {4}\[/m);
   assert.match(clues, /^Tesoro \[\? treasure\]: /m);
-  assert.match(clues, /Reglas globales:\n  · zona vacía: Faro \(torre\)\n/);
+  assert.match(clues, /Reglas globales:\n {2}· zona vacía: Faro \(torre\)\n/);
   const solved = (await run('solve', TOY)).out;
   assert.match(solved, /^soluciones encontradas: 1 · nodos: \d+$/m);
   assert.match(solved, /^Asesino: Clara /m);
-  assert.match((await run('solve', FARO, '--hyp', 'Olga=1,6', '--limit', '5')).out, /^soluciones encontradas: 0 · nodos/m);
+  assert.match(
+    (await run('solve', FARO, '--hyp', 'Olga=1,6', '--limit', '5')).out,
+    /^soluciones encontradas: 0 · nodos/m
+  );
   await rejects(['solve', FARO, '--limit', 'abc'], /--limit debe ser un entero ≥ 1/);
   await rejects(['solve', FARO, '--limit', '0'], /--limit debe ser un entero ≥ 1/);
   await rejects(['solve', FARO, '--hyp', 'Olga=9,1'], /fila fuera de rango \(1-7\)/);
@@ -90,12 +103,22 @@ test('explain --out and render write files; render validates --crop and reads ov
     assert.match((await run('explain', FARO, '--out', txt)).out, /^escrito .*faro\.txt · 15 pasos · resuelto$/m);
     assert.ok(fs.readFileSync(txt, 'utf8').startsWith('1. '));
     const svg = path.join(dir, 'faro.svg');
-    assert.match((await run('render', FARO, '--out', svg, '--solution', '--legend', '--crop', '1,1,7,7')).out, /^escrito .*faro\.svg$/m);
+    assert.match(
+      (await run('render', FARO, '--out', svg, '--solution', '--legend', '--crop', '1,1,7,7')).out,
+      /^escrito .*faro\.svg$/m
+    );
     const content = fs.readFileSync(svg, 'utf8');
     assert.ok(content.startsWith('<svg') && (content.match(/<circle/g) || []).length === 7);
     await rejects(['render', FARO, '--out', svg, '--crop', '1,2,3'], /--crop debe ser r1,c1,r2,c2/);
     const overlay = path.join(dir, 'overlay.json');
-    fs.writeFileSync(overlay, JSON.stringify({ rows: [{ r: 2 }], cols: [{ c: 1, fill: '#fee' }], cells: [{ r: 1, c: 1, text: 'X', cross: '#f00', border: '#00f', small: true }] }));
+    fs.writeFileSync(
+      overlay,
+      JSON.stringify({
+        rows: [{ r: 2 }],
+        cols: [{ c: 1, fill: '#fee' }],
+        cells: [{ r: 1, c: 1, text: 'X', cross: '#f00', border: '#00f', small: true }],
+      })
+    );
     assert.match((await run('render', TOY, '--out', svg, '--overlay', overlay)).out, /^escrito /);
     assert.ok(fs.readFileSync(svg, 'utf8').includes('>X</text>'));
   });
@@ -105,7 +128,7 @@ test('official puzzles: annotations option, translation files, language check an
   const warn = [];
   const P = resolvePuzzle(OFFICIAL, { annotations: ANN, lang: 'es' }, w => warn.push(w));
   assert.strictEqual(P.name, 'Mansión sintética');
-  assert.strictEqual(P.characters[1].clue, 'Estaba en la cama, al oeste de Leo.');   // from puzzle-synthetic-manor-es.json
+  assert.strictEqual(P.characters[1].clue, 'Estaba en la cama, al oeste de Leo.'); // from puzzle-synthetic-manor-es.json
   assert.deepStrictEqual(warn, []);
   const P2 = resolvePuzzle(OFFICIAL, { annotations: ANN, lang: 'fr' }, w => warn.push(w));
   assert.strictEqual(P2.name, 'Synthetic Manor');
@@ -118,22 +141,35 @@ test('official puzzles: annotations option, translation files, language check an
   // slug lookup in the cache directory: --cache option or MURDOKU_CACHE
   assert.strictEqual(resolvePuzzle('puzzle-synthetic-manor', { cache: FIX, annotations: ANN }).name, 'Synthetic Manor');
   process.env.MURDOKU_CACHE = FIX;
-  try { assert.strictEqual(resolvePuzzle('puzzle-synthetic-manor', { annotations: ANN }).characters.length, 4); }
-  finally { delete process.env.MURDOKU_CACHE; }
-  await rejects(['info', 'puzzle-synthetic-manor', '--cache', path.join(FIX, 'nowhere')], /No encuentro el puzle "puzzle-synthetic-manor" \(ni fichero ni .*nowhere/);
+  try {
+    assert.strictEqual(resolvePuzzle('puzzle-synthetic-manor', { annotations: ANN }).characters.length, 4);
+  } finally {
+    delete process.env.MURDOKU_CACHE;
+  }
+  await rejects(
+    ['info', 'puzzle-synthetic-manor', '--cache', path.join(FIX, 'nowhere')],
+    /No encuentro el puzle "puzzle-synthetic-manor" \(ni fichero ni .*nowhere/
+  );
   const r = await run('solve', OFFICIAL, '--annotations', ANN);
   assert.match(r.out, /✔ coincide con el asesino oficial \(Leo\)/);
   assert.match(r.err, /^aviso: código de objeto desconocido 999 en R4C3/m);
   assert.match(r.err, /^aviso: Ivy se considera la víctima por el texto de su pista/m);
-  assert.match((await run('info', OFFICIAL, '--annotations', ANN)).out, /Pistas oficiales: 2 · texto de solución oficial: 1 líneas · índice del asesino: 3/);
+  assert.match(
+    (await run('info', OFFICIAL, '--annotations', ANN)).out,
+    /Pistas oficiales: 2 · texto de solución oficial: 1 líneas · índice del asesino: 3/
+  );
 });
 
 test('own puzzles: unknown object names are reported as warnings', async () => {
   await withTempDir(async dir => {
     const spec = JSON.parse(fs.readFileSync(TOY, 'utf8'));
     spec.objects.R2C2 = 'chiar';
-    const file = path.join(dir, 'typo.json'); fs.writeFileSync(file, JSON.stringify(spec));
-    assert.match((await run('info', file)).err, /^aviso: objeto desconocido "chiar" en R2C2: se trata como no ocupable/m);
+    const file = path.join(dir, 'typo.json');
+    fs.writeFileSync(file, JSON.stringify(spec));
+    assert.match(
+      (await run('info', file)).err,
+      /^aviso: objeto desconocido "chiar" en R2C2: se trata como no ocupable/m
+    );
   });
 });
 

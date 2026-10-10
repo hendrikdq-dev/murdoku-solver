@@ -1,0 +1,9 @@
+# only the JavaScript sources and tests are formatted; JSON puzzles keep their hand layout
+*
+!src/
+!src/**/
+!src/**/*.js
+!test/
+!test/**/
+!test/**/*.js
+!eslint.config.js

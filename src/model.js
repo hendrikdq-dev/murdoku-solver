@@ -3,7 +3,12 @@
 // rows/columns in the public API are 1-based (R1..Rh, C1..Cw) like in the puzzles.
 const { OCCUPIABLE_BY_NAME } = require('./objects');
 
-const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+const DIRS = [
+  [-1, 0],
+  [1, 0],
+  [0, -1],
+  [0, 1],
+];
 
 class Puzzle {
   constructor(spec) {
@@ -12,16 +17,16 @@ class Puzzle {
     this.width = spec.width;
     this.height = spec.height;
     this.n = this.width * this.height;
-    this.areaIds = spec.areaIds;                 // raw area id per cell
-    this.areaNames = spec.areaNames;             // name per raw area id
+    this.areaIds = spec.areaIds; // raw area id per cell
+    this.areaNames = spec.areaNames; // name per raw area id
     this.subareaOf = spec.subareaOf || new Map(); // raw id -> main id
     this.mainIds = this.areaIds.map(a => (this.subareaOf.has(a) ? this.subareaOf.get(a) : a));
-    this.objects = spec.objects;                 // lower-case object name per cell, or null
+    this.objects = spec.objects; // lower-case object name per cell, or null
     this.occupiableNames = spec.occupiableNames; // Set of lower-case names
-    this.frontCells = spec.frontCells || [];     // [[cellA, cellB], ...] in front of doors/windows
-    this.areaGroups = spec.areaGroups || {};     // group name -> [area names]
-    this.characters = spec.characters;           // [{name, sex, attrs:Set, role, clue, constraints:[...]}]
-    this.global = spec.global || [];             // global constraint specs
+    this.frontCells = spec.frontCells || []; // [[cellA, cellB], ...] in front of doors/windows
+    this.areaGroups = spec.areaGroups || {}; // group name -> [area names]
+    this.characters = spec.characters; // [{name, sex, attrs:Set, role, clue, constraints:[...]}]
+    this.global = spec.global || []; // global constraint specs
     this.meta = spec.meta || {};
     this._areaCells = new Map();
     for (let i = 0; i < this.n; i++) {
@@ -33,48 +38,117 @@ class Puzzle {
     this._nameIndex = new Map(this.characters.map((ch, k) => [ch.name.toLowerCase(), k]));
   }
 
-  idx(r, c) { return cellIndex(r, c, this.width); }
-  row(i) { return Math.floor(i / this.width) + 1; }
-  col(i) { return (i % this.width) + 1; }
-  label(i) { return `R${this.row(i)}C${this.col(i)}`; }
-  inside(r, c) { return r >= 1 && r <= this.height && c >= 1 && c <= this.width; }
+  idx(r, c) {
+    return cellIndex(r, c, this.width);
+  }
+  row(i) {
+    return Math.floor(i / this.width) + 1;
+  }
+  col(i) {
+    return (i % this.width) + 1;
+  }
+  label(i) {
+    return `R${this.row(i)}C${this.col(i)}`;
+  }
+  inside(r, c) {
+    return r >= 1 && r <= this.height && c >= 1 && c <= this.width;
+  }
 
-  areaOf(i) { return this.mainIds[i]; }
-  rawAreaOf(i) { return this.areaIds[i]; }
-  areaName(id) { return this.areaNames[id] ?? `area ${id}`; }
-  areaNameOf(i) { return this.areaName(this.mainIds[i]); }
-  cellsOfArea(id) { return this._areaCells.get(id) || []; }
-  mainAreaIds() { return [...this._areaCells.keys()]; }
+  areaOf(i) {
+    return this.mainIds[i];
+  }
+  rawAreaOf(i) {
+    return this.areaIds[i];
+  }
+  areaName(id) {
+    return this.areaNames[id] ?? `area ${id}`;
+  }
+  areaNameOf(i) {
+    return this.areaName(this.mainIds[i]);
+  }
+  cellsOfArea(id) {
+    return this._areaCells.get(id) || [];
+  }
+  mainAreaIds() {
+    return [...this._areaCells.keys()];
+  }
 
-  objectAt(i) { return this.objects[i]; }
-  isFree(i) { const o = this.objects[i]; return o === null || o === undefined || this.occupiableNames.has(o); }
-  freeCells() { const out = []; for (let i = 0; i < this.n; i++) if (this.isFree(i)) out.push(i); return out; }
-  allCells() { return Array.from({ length: this.n }, (_, i) => i); }
+  objectAt(i) {
+    return this.objects[i];
+  }
+  isFree(i) {
+    const o = this.objects[i];
+    return o === null || o === undefined || this.occupiableNames.has(o);
+  }
+  freeCells() {
+    const out = [];
+    for (let i = 0; i < this.n; i++) if (this.isFree(i)) out.push(i);
+    return out;
+  }
+  allCells() {
+    return Array.from({ length: this.n }, (_, i) => i);
+  }
 
   neighbors(i) {
-    const r = this.row(i), c = this.col(i), out = [];
-    for (const [dr, dc] of DIRS) { const rr = r + dr, cc = c + dc; if (this.inside(rr, cc)) out.push(this.idx(rr, cc)); }
+    const r = this.row(i),
+      c = this.col(i),
+      out = [];
+    for (const [dr, dc] of DIRS) {
+      const rr = r + dr,
+        cc = c + dc;
+      if (this.inside(rr, cc)) out.push(this.idx(rr, cc));
+    }
     return out;
   }
   /** Orthogonally adjacent and in the same (main) area: the official meaning of "beside". */
-  sameAreaNeighbors(i) { return this.neighbors(i).filter(j => this.mainIds[j] === this.mainIds[i]); }
-  besideObject(i, name) { return this.sameAreaNeighbors(i).some(j => this.objects[j] === name); }
-  besideArea(i, matcher) { return this.neighbors(i).some(j => matcher(this.mainIds[j]) || matcher(this.areaIds[j])); }
-  inFrontOfDoor(i) { return this._front.has(i); }
-  areaHasObject(id, name) { return this.cellsOfArea(id).some(j => this.objects[j] === name); }
-  columnHasObject(c, name) { for (let r = 1; r <= this.height; r++) if (this.objects[this.idx(r, c)] === name) return true; return false; }
-  rowHasObject(r, name) { for (let c = 1; c <= this.width; c++) if (this.objects[this.idx(r, c)] === name) return true; return false; }
-  topRowOfArea(id) { return Math.min(...this.cellsOfArea(id).map(i => this.row(i))); }
-  bottomRowOfArea(id) { return Math.max(...this.cellsOfArea(id).map(i => this.row(i))); }
-  leftColOfArea(id) { return Math.min(...this.cellsOfArea(id).map(i => this.col(i))); }
-  rightColOfArea(id) { return Math.max(...this.cellsOfArea(id).map(i => this.col(i))); }
+  sameAreaNeighbors(i) {
+    return this.neighbors(i).filter(j => this.mainIds[j] === this.mainIds[i]);
+  }
+  besideObject(i, name) {
+    return this.sameAreaNeighbors(i).some(j => this.objects[j] === name);
+  }
+  besideArea(i, matcher) {
+    return this.neighbors(i).some(j => matcher(this.mainIds[j]) || matcher(this.areaIds[j]));
+  }
+  inFrontOfDoor(i) {
+    return this._front.has(i);
+  }
+  areaHasObject(id, name) {
+    return this.cellsOfArea(id).some(j => this.objects[j] === name);
+  }
+  columnHasObject(c, name) {
+    for (let r = 1; r <= this.height; r++) if (this.objects[this.idx(r, c)] === name) return true;
+    return false;
+  }
+  rowHasObject(r, name) {
+    for (let c = 1; c <= this.width; c++) if (this.objects[this.idx(r, c)] === name) return true;
+    return false;
+  }
+  topRowOfArea(id) {
+    return Math.min(...this.cellsOfArea(id).map(i => this.row(i)));
+  }
+  bottomRowOfArea(id) {
+    return Math.max(...this.cellsOfArea(id).map(i => this.row(i)));
+  }
+  leftColOfArea(id) {
+    return Math.min(...this.cellsOfArea(id).map(i => this.col(i)));
+  }
+  rightColOfArea(id) {
+    return Math.max(...this.cellsOfArea(id).map(i => this.col(i)));
+  }
   /** A cell is a corner of its area when a vertical and a horizontal neighbour both lie outside the area (or off-grid). */
   isAreaCorner(i) {
-    const r = this.row(i), c = this.col(i), a = this.mainIds[i];
+    const r = this.row(i),
+      c = this.col(i),
+      a = this.mainIds[i];
     const out = (rr, cc) => !this.inside(rr, cc) || this.mainIds[this.idx(rr, cc)] !== a;
     return (out(r - 1, c) || out(r + 1, c)) && (out(r, c - 1) || out(r, c + 1));
   }
-  isGridCorner(i) { const r = this.row(i), c = this.col(i); return (r === 1 || r === this.height) && (c === 1 || c === this.width); }
+  isGridCorner(i) {
+    const r = this.row(i),
+      c = this.col(i);
+    return (r === 1 || r === this.height) && (c === 1 || c === this.width);
+  }
 
   /**
    * Build a matcher for an area specification: exact name, a "kind" (e.g. "Cabin" matches "Cabin A",
@@ -94,13 +168,15 @@ class Puzzle {
   }
   /** Main area ids matching a spec (through main or raw names). */
   areasMatching(spec) {
-    const m = this.areaMatcher(spec), out = new Set();
+    const m = this.areaMatcher(spec),
+      out = new Set();
     for (let i = 0; i < this.n; i++) if (m(this.mainIds[i]) || m(this.areaIds[i])) out.add(this.mainIds[i]);
     return out;
   }
   /** Cells whose raw or main area matches the spec. */
   cellsMatchingArea(spec) {
-    const m = this.areaMatcher(spec), out = [];
+    const m = this.areaMatcher(spec),
+      out = [];
     for (let i = 0; i < this.n; i++) if (m(this.mainIds[i]) || m(this.areaIds[i])) out.push(i);
     return out;
   }
@@ -110,25 +186,34 @@ class Puzzle {
     if (k === undefined) throw new Error(`personaje desconocido: ${name}`);
     return k;
   }
-  isPerson(k) { return this.characters[k].role !== 'treasure'; }
+  isPerson(k) {
+    return this.characters[k].role !== 'treasure';
+  }
 }
 
 /** Normalise an object name as used in puzzle files and clue specs. */
-function normObj(name) { return name == null ? null : String(name).trim().toLowerCase(); }
+function normObj(name) {
+  return name == null ? null : String(name).trim().toLowerCase();
+}
 
 /** 0-based cell index of a 1-based row/column in a grid of the given width. */
-function cellIndex(r, c, width) { return (r - 1) * width + (c - 1); }
+function cellIndex(r, c, width) {
+  return (r - 1) * width + (c - 1);
+}
 
 /** Pairs of cells in front of doors/windows, from [[r, c], [r, c]] pairs (1-based). */
-function doorCells(doors, width) { return (doors || []).map(pair => pair.map(([r, c]) => cellIndex(r, c, width))); }
+function doorCells(doors, width) {
+  return (doors || []).map(pair => pair.map(([r, c]) => cellIndex(r, c, width)));
+}
 
 /** Add each group name as an attribute of its members (names matched case-insensitively). */
 function applyGroups(characters, groups) {
-  for (const [g, members] of Object.entries(groups || {})) for (const m of members) {
-    const ch = characters.find(c => c.name.toLowerCase() === String(m).toLowerCase());
-    if (!ch) throw new Error(`grupo ${g}: miembro desconocido ${m}`);
-    ch.attrs.add(g.toLowerCase());
-  }
+  for (const [g, members] of Object.entries(groups || {}))
+    for (const m of members) {
+      const ch = characters.find(c => c.name.toLowerCase() === String(m).toLowerCase());
+      if (!ch) throw new Error(`grupo ${g}: miembro desconocido ${m}`);
+      ch.attrs.add(g.toLowerCase());
+    }
 }
 
 /** Default occupiable set: official table plus the generic ones used in hand-written puzzles. */

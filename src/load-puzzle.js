@@ -23,20 +23,26 @@ function fromSpec(j) {
   const height = j.height ?? j.areas.length;
   const width = j.width ?? j.areas[0].length;
   if (j.areas.length !== height) throw new Error(`areas: se esperaban ${height} filas y hay ${j.areas.length}`);
-  if (j.objective !== undefined && !OBJECTIVES.includes(j.objective)) throw new Error(`objective no válido: "${j.objective}" (${OBJECTIVES.join(', ')})`);
+  if (j.objective !== undefined && !OBJECTIVES.includes(j.objective))
+    throw new Error(`objective no válido: "${j.objective}" (${OBJECTIVES.join(', ')})`);
   const inside = (r, c) => r >= 1 && r <= height && c >= 1 && c <= width;
   const codes = [];
   const areaIds = [];
   for (const rowStr of j.areas) {
-    if (rowStr.length !== width) throw new Error(`areas: la fila "${rowStr}" tiene ${rowStr.length} casillas y se esperaban ${width}`);
+    if (rowStr.length !== width)
+      throw new Error(`areas: la fila "${rowStr}" tiene ${rowStr.length} casillas y se esperaban ${width}`);
     for (const ch of rowStr) {
       let id = codes.indexOf(ch);
-      if (id < 0) { id = codes.length; codes.push(ch); }
+      if (id < 0) {
+        id = codes.length;
+        codes.push(ch);
+      }
       areaIds.push(id);
     }
   }
   const areaNames = codes.map(ch => (j.areaNames && j.areaNames[ch]) || ch);
-  for (const code of Object.keys(j.areaNames || {})) if (!codes.includes(code)) warnings.push(`areaNames: el código "${code}" no aparece en "areas"`);
+  for (const code of Object.keys(j.areaNames || {}))
+    if (!codes.includes(code)) warnings.push(`areaNames: el código "${code}" no aparece en "areas"`);
   const subareaOf = new Map();
   for (const [sub, main] of Object.entries(j.subareas || {})) {
     if (!codes.includes(sub)) throw new Error(`subareas: código desconocido "${sub}"`);
@@ -52,9 +58,13 @@ function fromSpec(j) {
     if (!inside(r, c)) throw new Error(`objeto fuera del tablero: ${key}`);
     const obj = normObj(name);
     objects[cellIndex(r, c, width)] = obj;
-    if (!OCCUPIABLE_BY_NAME.has(obj) && !declared.has(obj)) warnings.push(`objeto desconocido "${obj}" en R${r}C${c}: se trata como no ocupable (añádelo a "occupiable" u "occupiableExtra" si se puede ocupar)`);
+    if (!OCCUPIABLE_BY_NAME.has(obj) && !declared.has(obj))
+      warnings.push(
+        `objeto desconocido "${obj}" en R${r}C${c}: se trata como no ocupable (añádelo a "occupiable" u "occupiableExtra" si se puede ocupar)`
+      );
   }
-  for (const pair of j.doors || []) for (const [r, c] of pair) if (!inside(r, c)) throw new Error(`doors: casilla fuera del tablero R${r}C${c}`);
+  for (const pair of j.doors || [])
+    for (const [r, c] of pair) if (!inside(r, c)) throw new Error(`doors: casilla fuera del tablero R${r}C${c}`);
   const frontCells = doorCells(j.doors, width);
   const seen = new Set();
   const characters = (j.characters || []).map(ch => {
@@ -62,23 +72,35 @@ function fromSpec(j) {
     if (seen.has(ch.name.toLowerCase())) throw new Error(`personaje duplicado: ${ch.name}`);
     seen.add(ch.name.toLowerCase());
     const sex = ch.sex ? String(ch.sex)[0].toLowerCase() : null;
-    if (sex !== null && sex !== 'm' && sex !== 'f') throw new Error(`${ch.name}: sexo no válido "${ch.sex}" (usa m o f)`);
+    if (sex !== null && sex !== 'm' && sex !== 'f')
+      throw new Error(`${ch.name}: sexo no válido "${ch.sex}" (usa m o f)`);
     const role = ch.role || 'suspect';
     if (!ROLES.includes(role)) throw new Error(`${ch.name}: rol no válido "${ch.role}" (${ROLES.join(', ')})`);
     return {
       name: ch.name,
-      sex,                                                    // 'm' | 'f' | null
+      sex, // 'm' | 'f' | null
       attrs: new Set((ch.attrs || []).map(a => String(a).toLowerCase())),
-      role,                                                   // 'suspect' | 'victim' | 'treasure'
+      role, // 'suspect' | 'victim' | 'treasure'
       clue: ch.clue || '',
       constraints: ch.constraints || [],
     };
   });
   applyGroups(characters, j.groups);
   return new Puzzle({
-    name: j.name, objective: j.objective || (characters.some(c => c.role === 'treasure') ? 'treasure' : 'murder'),
-    width, height, areaIds, areaNames, subareaOf, objects, occupiableNames, frontCells,
-    areaGroups: j.areaGroups || {}, characters, global: j.global || [], meta: { source: 'own', warnings },
+    name: j.name,
+    objective: j.objective || (characters.some(c => c.role === 'treasure') ? 'treasure' : 'murder'),
+    width,
+    height,
+    areaIds,
+    areaNames,
+    subareaOf,
+    objects,
+    occupiableNames,
+    frontCells,
+    areaGroups: j.areaGroups || {},
+    characters,
+    global: j.global || [],
+    meta: { source: 'own', warnings },
   });
 }
 

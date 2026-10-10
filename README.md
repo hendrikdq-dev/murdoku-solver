@@ -63,6 +63,8 @@ node src/cli.js explain puzzles/examples/faro-tesoro.json   # 7×7 con tesoro, s
 npm test
 ```
 
+Estilo: `npm run lint` (ESLint) y `npm run format` (Prettier sobre `src/` y `test/`); la CI comprueba ambos. Las dependencias son solo de desarrollo: el programa sigue sin necesitar nada más que Node.
+
 Los tests con puzles reales se saltan si faltan sus ficheros: `cache/official/preppers-medium.json` (descárgalo con `fetch`), `private/puzzles/treasure-hunt.json` y `treasure-hunt.expected.json` (el puzle del concurso y su solución no se distribuyen con el repositorio).
 
 `test/clues.test.js` comprueba cada tipo de pista contra un oráculo independiente: enumera todas las soluciones de un tablero de 5×5 sin la pista, las filtra con una reformulación directa de su significado y exige que el solucionador devuelva exactamente ese conjunto; además verifica que el motor de deducción nunca elimina una casilla que pertenece a una solución.

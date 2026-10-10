@@ -4,12 +4,31 @@
   "description": "Solucionador, motor de deducción explicada y herramientas de pistas para puzles Murdoku (Sudoku + misterio de asesinato)",
   "license": "MIT",
   "private": true,
-  "engines": { "node": ">=20" },
-  "bin": { "murdoku": "src/cli.js" },
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "murdoku": "src/cli.js"
+  },
   "scripts": {
     "test": "node --test",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "solve": "node src/cli.js solve",
     "explain": "node src/cli.js explain"
   },
-  "keywords": ["murdoku", "puzzle", "logic", "solver", "sudoku"]
+  "keywords": [
+    "murdoku",
+    "puzzle",
+    "logic",
+    "solver",
+    "sudoku"
+  ],
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^16.5.0",
+    "prettier": "^3.9.10"
+  }
 }

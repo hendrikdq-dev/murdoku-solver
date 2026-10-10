@@ -31,14 +31,24 @@ function solve(P, opts = {}) {
   }
   function rec(st) {
     nodes++;
-    try { prop.propagate(st); } catch (e) { if (e instanceof Contra) return; throw e; }
+    try {
+      prop.propagate(st);
+    } catch (e) {
+      if (e instanceof Contra) return;
+      throw e;
+    }
     if (!consistent(st)) return;
     let best = -1;
-    for (let k = 0; k < n; k++) if (st.cand[k].length > 1 && (best < 0 || st.cand[k].length < st.cand[best].length)) best = k;
-    if (best < 0) { solutions.push(st.cand.map(a => a[0])); return; }
+    for (let k = 0; k < n; k++)
+      if (st.cand[k].length > 1 && (best < 0 || st.cand[k].length < st.cand[best].length)) best = k;
+    if (best < 0) {
+      solutions.push(st.cand.map(a => a[0]));
+      return;
+    }
     for (const c of st.cand[best]) {
       if (solutions.length >= limit) return;
-      const t = prop.clone(st); t.cand[best] = [c];
+      const t = prop.clone(st);
+      t.cand[best] = [c];
       rec(t);
     }
   }
@@ -51,16 +61,24 @@ function victimCompanions(P, sol) {
   const victim = P.characters.findIndex(c => c.role === 'victim');
   if (victim < 0) return null;
   const area = P.areaOf(sol[victim]);
-  const companions = P.characters.map((c, k) => k).filter(k => k !== victim && P.isPerson(k) && P.areaOf(sol[k]) === area);
+  const companions = P.characters
+    .map((c, k) => k)
+    .filter(k => k !== victim && P.isPerson(k) && P.areaOf(sol[k]) === area);
   return { victim, area, companions };
 }
 
 /** Pretty description of a solution. */
 function describeSolution(P, sol) {
-  const lines = P.characters.map((ch, k) => `${ch.name.padEnd(12)} ${P.label(sol[k]).padEnd(7)} ${P.areaNameOf(sol[k])}${P.objectAt(sol[k]) ? ' (' + P.objectAt(sol[k]) + ')' : ''}`);
+  const lines = P.characters.map(
+    (ch, k) =>
+      `${ch.name.padEnd(12)} ${P.label(sol[k]).padEnd(7)} ${P.areaNameOf(sol[k])}${P.objectAt(sol[k]) ? ' (' + P.objectAt(sol[k]) + ')' : ''}`
+  );
   if (P.objective === 'murder') {
     const vc = victimCompanions(P, sol);
-    if (vc) lines.push(`Asesino: ${vc.companions.map(k => P.characters[k].name).join(', ') || '?'} (a solas con ${P.characters[vc.victim].name} en ${P.areaName(vc.area)})`);
+    if (vc)
+      lines.push(
+        `Asesino: ${vc.companions.map(k => P.characters[k].name).join(', ') || '?'} (a solas con ${P.characters[vc.victim].name} en ${P.areaName(vc.area)})`
+      );
   }
   if (P.objective === 'treasure') {
     const t = P.characters.findIndex(c => c.role === 'treasure');

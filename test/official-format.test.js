@@ -26,28 +26,51 @@ const ANNOTATIONS = JSON.parse(fs.readFileSync(ANN_PATH, 'utf8'));
 test('official format: orientation, subrooms, objects (extension, bus, unknown code)', () => {
   const P = loadOfficialJson(OFFICIAL, ANNOTATIONS, 'en');
   assert.strictEqual(P.name, 'Synthetic Manor');
-  assert.strictEqual(P.width, 4); assert.strictEqual(P.height, 4);
-  assert.strictEqual(P.areaNameOf(P.idx(1, 4)), 'Lounge');                   // room_code_3_0 -> row 1, column 4
-  assert.strictEqual(P.areaNameOf(P.idx(4, 4)), 'Yard');                     // Shed is a subroom of Yard
+  assert.strictEqual(P.width, 4);
+  assert.strictEqual(P.height, 4);
+  assert.strictEqual(P.areaNameOf(P.idx(1, 4)), 'Lounge'); // room_code_3_0 -> row 1, column 4
+  assert.strictEqual(P.areaNameOf(P.idx(4, 4)), 'Yard'); // Shed is a subroom of Yard
   assert.strictEqual(P.areaName(P.rawAreaOf(P.idx(4, 4))), 'Shed');
-  assert.strictEqual(P.objectAt(P.idx(2, 1)), 'bed'); assert.strictEqual(P.objectAt(P.idx(2, 2)), 'bed');   // extends to the right
+  assert.strictEqual(P.objectAt(P.idx(2, 1)), 'bed');
+  assert.strictEqual(P.objectAt(P.idx(2, 2)), 'bed'); // extends to the right
   assert.ok(P.isFree(P.idx(2, 1)) && P.isFree(P.idx(2, 2)));
-  for (const [r, c] of [[3, 1], [3, 2], [4, 1], [4, 2]]) { assert.strictEqual(P.objectAt(P.idx(r, c)), 'bus', `R${r}C${c}`); assert.ok(P.isFree(P.idx(r, c))); }
+  for (const [r, c] of [
+    [3, 1],
+    [3, 2],
+    [4, 1],
+    [4, 2],
+  ]) {
+    assert.strictEqual(P.objectAt(P.idx(r, c)), 'bus', `R${r}C${c}`);
+    assert.ok(P.isFree(P.idx(r, c)));
+  }
   assert.strictEqual(P.objectAt(P.idx(1, 4)), 'chair');
-  assert.strictEqual(P.objectAt(P.idx(3, 4)), 'table'); assert.ok(!P.isFree(P.idx(3, 4)));
-  assert.strictEqual(P.objectAt(P.idx(4, 3)), 'obj999'); assert.ok(!P.isFree(P.idx(4, 3)));
+  assert.strictEqual(P.objectAt(P.idx(3, 4)), 'table');
+  assert.ok(!P.isFree(P.idx(3, 4)));
+  assert.strictEqual(P.objectAt(P.idx(4, 3)), 'obj999');
+  assert.ok(!P.isFree(P.idx(4, 3)));
   assert.ok(P.inFrontOfDoor(P.idx(1, 2)) && P.inFrontOfDoor(P.idx(1, 3)));
   assert.strictEqual(P.meta.edges.length, 1);
 });
 
 test('official format: characters, victim detection, attributes, groups, metadata and warnings', () => {
   const P = loadOfficialJson(OFFICIAL, ANNOTATIONS, 'en');
-  assert.deepStrictEqual(P.characters.map(c => c.name), ['Ivy', 'Jack', 'Kim', 'Leo']);
-  assert.deepStrictEqual(P.characters.map(c => c.sex), ['f', 'm', 'f', 'm']);
-  assert.deepStrictEqual(P.characters.map(c => c.role), ['victim', 'suspect', 'suspect', 'suspect']);   // "I am the victim." (no annotation role)
+  assert.deepStrictEqual(
+    P.characters.map(c => c.name),
+    ['Ivy', 'Jack', 'Kim', 'Leo']
+  );
+  assert.deepStrictEqual(
+    P.characters.map(c => c.sex),
+    ['f', 'm', 'f', 'm']
+  );
+  assert.deepStrictEqual(
+    P.characters.map(c => c.role),
+    ['victim', 'suspect', 'suspect', 'suspect']
+  ); // "I am the victim." (no annotation role)
   assert.strictEqual(P.characters[0].clue, 'I am the victim. I was in the Shed.');
   assert.ok(P.characters[1].attrs.has('hat') && P.characters[1].attrs.has('gents'));
-  assert.ok(P.characters[3].attrs.has('beard') && P.characters[3].attrs.has('gents') && !P.characters[3].attrs.has('hat'));
+  assert.ok(
+    P.characters[3].attrs.has('beard') && P.characters[3].attrs.has('gents') && !P.characters[3].attrs.has('hat')
+  );
   assert.strictEqual(P.characters[3].official.accessory, 2);
   assert.strictEqual(P.objective, 'murder');
   assert.strictEqual(P.meta.murdererIndex, 3);
@@ -58,22 +81,33 @@ test('official format: characters, victim detection, attributes, groups, metadat
   assert.strictEqual(P.meta.warnings.length, 2);
   assert.match(P.meta.warnings[0], /código de objeto desconocido 999 en R4C3/);
   assert.match(P.meta.warnings[1], /Ivy se considera la víctima por el texto de su pista/);
-  const confirmed = loadOfficialJson(OFFICIAL, { ...ANNOTATIONS, characters: { ...ANNOTATIONS.characters, Ivy: { ...ANNOTATIONS.characters.Ivy, role: 'victim' } } }, 'en');
+  const confirmed = loadOfficialJson(
+    OFFICIAL,
+    {
+      ...ANNOTATIONS,
+      characters: { ...ANNOTATIONS.characters, Ivy: { ...ANNOTATIONS.characters.Ivy, role: 'victim' } },
+    },
+    'en'
+  );
   assert.strictEqual(confirmed.meta.warnings.length, 1);
-  const odd = JSON.parse(JSON.stringify(OFFICIAL)); odd.CHARACTERS.char_sex_2 = 7; delete odd.PROPERTIES.total_chars;
+  const odd = JSON.parse(JSON.stringify(OFFICIAL));
+  odd.CHARACTERS.char_sex_2 = 7;
+  delete odd.PROPERTIES.total_chars;
   const W = loadOfficialJson(odd, ANNOTATIONS, 'en').meta.warnings;
   assert.ok(W.some(w => /no indica total_chars/.test(w)));
   assert.strictEqual(loadOfficialJson(odd, ANNOTATIONS, 'en').characters.length, 0);
   odd.PROPERTIES.total_chars = 4;
-  assert.ok(loadOfficialJson(odd, ANNOTATIONS, 'en').meta.warnings.some(w => /Kim: valor de sexo no reconocido \(7\)/.test(w)));
+  assert.ok(
+    loadOfficialJson(odd, ANNOTATIONS, 'en').meta.warnings.some(w => /Kim: valor de sexo no reconocido \(7\)/.test(w))
+  );
 });
 
 test('official format: Spanish texts with fallback to English', () => {
   const P = loadOfficialJson(OFFICIAL, ANNOTATIONS, 'es');
   assert.strictEqual(P.name, 'Mansión sintética');
   assert.strictEqual(P.characters[0].clue, 'Soy la víctima. Estaba en el cobertizo.');
-  assert.strictEqual(P.characters[0].role, 'victim');                          // "la víctima" is recognised too
-  assert.strictEqual(P.characters[1].clue, 'I was on the bed, west of Leo.');  // no Spanish text: English kept
+  assert.strictEqual(P.characters[0].role, 'victim'); // "la víctima" is recognised too
+  assert.strictEqual(P.characters[1].clue, 'I was on the bed, west of Leo.'); // no Spanish text: English kept
   assert.deepStrictEqual(P.meta.hints, ['Empieza por Jack.', 'Then Kim.']);
   assert.deepStrictEqual(P.meta.solution, ['Fue Leo.']);
 });
@@ -96,8 +130,11 @@ test('official format: unique solution, official murderer, annotations without r
 test('official format: file-based loader and validation errors', () => {
   const P = loadOfficial(JSON_PATH, ANN_PATH, 'en');
   assert.strictEqual(solve(P, { limit: 2 }).solutions.length, 1);
-  const noAnn = loadOfficial(JSON_PATH, path.join(FIX, 'missing.json'), 'en');   // a missing annotation file is tolerated
+  const noAnn = loadOfficial(JSON_PATH, path.join(FIX, 'missing.json'), 'en'); // a missing annotation file is tolerated
   assert.ok(noAnn.characters.every(c => c.constraints.length === 0));
   assert.throws(() => loadOfficialJson({ PROPERTIES: {}, GRID: {} }), /tamaño de rejilla ausente/);
-  assert.throws(() => loadOfficialJson(OFFICIAL, { groups: { gents: ['Nobody'] } }), /grupo gents: miembro desconocido Nobody/);
+  assert.throws(
+    () => loadOfficialJson(OFFICIAL, { groups: { gents: ['Nobody'] } }),
+    /grupo gents: miembro desconocido Nobody/
+  );
 });

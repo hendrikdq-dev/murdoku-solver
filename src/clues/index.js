@@ -31,9 +31,14 @@ function build(P, spec, owner) {
   if (!builder) throw new Error(`tipo de pista desconocido: ${spec.type}`);
   const neg = !!spec.not;
   return builder({
-    P, spec, owner, me: owner, myName: owner === null ? '' : cname(P, owner),
+    P,
+    spec,
+    owner,
+    me: owner,
+    myName: owner === null ? '' : cname(P, owner),
     obj: spec.object !== undefined ? normObj(spec.object) : null,
-    neg, N: x => (neg ? !x : x),
+    neg,
+    N: x => (neg ? !x : x),
     base: { type: spec.type, owner, spec, text: '', unary: null, check: () => true },
     build: spec2 => build(P, spec2, owner),
   });
@@ -44,8 +49,11 @@ function buildConstraints(P) {
   const out = [];
   // errors in a clue specification are reported with their owner and type
   const add = (spec, k, where) => {
-    try { out.push(build(P, spec || {}, k)); }
-    catch (e) { throw new Error(`${where} (${spec && spec.type}): ${e.message}`); }
+    try {
+      out.push(build(P, spec || {}, k));
+    } catch (e) {
+      throw new Error(`${where} (${spec && spec.type}): ${e.message}`);
+    }
   };
   P.characters.forEach((ch, k) => {
     for (const spec of ch.constraints) add(spec, k, `pista de ${ch.name}`);
@@ -72,7 +80,12 @@ function initialState(P, constraints, hypotheses = []) {
   const cand = initialCandidates(P, constraints);
   for (const h of hypotheses || []) {
     const k = P.charIndex(h.who);
-    cand[k] = cand[k].filter(c => (h.row === undefined || P.row(c) === +h.row) && (h.col === undefined || P.col(c) === +h.col) && (h.cell === undefined || c === h.cell));
+    cand[k] = cand[k].filter(
+      c =>
+        (h.row === undefined || P.row(c) === +h.row) &&
+        (h.col === undefined || P.col(c) === +h.col) &&
+        (h.cell === undefined || c === h.cell)
+    );
   }
   return { cand };
 }

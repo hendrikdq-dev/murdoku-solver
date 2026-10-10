@@ -18,23 +18,48 @@ function explain(P, opts = {}) {
   // steps: { kind: 'deduce', who, name, reason, kept, removed, fixedAt, text } (one per narrowing, see
   // propagate.js) or { kind: 'whatif', who, cell, text, details: [text] } (a refuted hypothesis)
   const steps = [];
-  const deduce = log => { for (const e of log) steps.push({ kind: 'deduce', ...e }); };
-  let stuck = false, contradiction = null;
+  const deduce = log => {
+    for (const e of log) steps.push({ kind: 'deduce', ...e });
+  };
+  let stuck = false,
+    contradiction = null;
   try {
-    const log0 = []; prop.propagate(st, log0); deduce(log0);
+    const log0 = [];
+    prop.propagate(st, log0);
+    deduce(log0);
     while (!solved(st)) {
-      const order = []; for (let k = 0; k < n; k++) if (P.isPerson(k) && st.cand[k].length > 1 && st.cand[k].length <= maxWhatIf) order.push(k);
+      const order = [];
+      for (let k = 0; k < n; k++)
+        if (P.isPerson(k) && st.cand[k].length > 1 && st.cand[k].length <= maxWhatIf) order.push(k);
       let best = null;
-      for (const k of order) for (const cell of st.cand[k]) {
-        const t = prop.clone(st); t.cand[k] = [cell]; const sub = [];
-        try { prop.propagate(t, sub); }
-        catch (e) { if (!(e instanceof Contra)) throw e; if (!best || sub.length < best.sub.length) best = { k, cell, sub, msg: e.message }; }
+      for (const k of order)
+        for (const cell of st.cand[k]) {
+          const t = prop.clone(st);
+          t.cand[k] = [cell];
+          const sub = [];
+          try {
+            prop.propagate(t, sub);
+          } catch (e) {
+            if (!(e instanceof Contra)) throw e;
+            if (!best || sub.length < best.sub.length) best = { k, cell, sub, msg: e.message };
+          }
+        }
+      if (!best) {
+        stuck = true;
+        break;
       }
-      if (!best) { stuck = true; break; }
       const fixed = best.sub.filter(e => e.fixedAt).map(e => `${e.name}=${e.fixedAt}`);
-      steps.push({ kind: 'whatif', who: best.k, cell: best.cell, text: `SUPONGAMOS ${name(best.k)} en ${S(best.cell)} ⇒ ${fixed.length ? fixed.join(', ') + ' ⇒ ' : ''}CONTRADICCIÓN: ${best.msg}`, details: best.sub.map(e => e.text) });
+      steps.push({
+        kind: 'whatif',
+        who: best.k,
+        cell: best.cell,
+        text: `SUPONGAMOS ${name(best.k)} en ${S(best.cell)} ⇒ ${fixed.length ? fixed.join(', ') + ' ⇒ ' : ''}CONTRADICCIÓN: ${best.msg}`,
+        details: best.sub.map(e => e.text),
+      });
       st.cand[best.k] = st.cand[best.k].filter(c => c !== best.cell);
-      const log = []; prop.propagate(st, log); deduce(log);
+      const log = [];
+      prop.propagate(st, log);
+      deduce(log);
     }
   } catch (e) {
     if (!(e instanceof Contra)) throw e;

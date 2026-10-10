@@ -30,7 +30,12 @@ function createPropagator(P, constraints, opts = {}) {
       if (log) {
         const removed = before.filter(c => !pred(c));
         log.push({
-          who: k, name: name(k), reason, kept: after, removed, fixedAt: after.length === 1 ? S(after[0]) : null,
+          who: k,
+          name: name(k),
+          reason,
+          kept: after,
+          removed,
+          fixedAt: after.length === 1 ? S(after[0]) : null,
           text: `[${reason}] ${name(k)}: quedan ${after.length}${fmtCells(after)} — se eliminan ${removed.length <= 8 ? removed.map(S).join(' ') : removed.length + ' casillas'}`,
         });
       }
@@ -41,56 +46,84 @@ function createPropagator(P, constraints, opts = {}) {
 
   function pass(st, log) {
     const emit = makeEmit(st, log);
-    let ch = false;
+    let changed = false;
     // 1. a fixed entity excludes everybody else from its row and column
-    for (let k = 0; k < n; k++) if (st.cand[k].length === 1) {
-      const c = st.cand[k][0], r = P.row(c), col = P.col(c);
-      for (let m = 0; m < n; m++) if (m !== k) ch = emit(m, d => P.row(d) !== r && P.col(d) !== col, `${name(k)} está en ${S(c)}: fila y columna ocupadas`) || ch;
-    }
-    if (ch) return true;
+    for (let k = 0; k < n; k++)
+      if (st.cand[k].length === 1) {
+        const c = st.cand[k][0],
+          r = P.row(c),
+          col = P.col(c);
+        for (let m = 0; m < n; m++)
+          if (m !== k)
+            changed =
+              emit(m, d => P.row(d) !== r && P.col(d) !== col, `${name(k)} está en ${S(c)}: fila y columna ocupadas`) ||
+              changed;
+      }
+    if (changed) return true;
     // 2. hidden singles: a line that only one entity can occupy belongs to it
     if (exactCover) {
-      for (const { word, size, of } of DIMS) for (let v = 1; v <= size; v++) {
-        const w = []; for (let k = 0; k < n; k++) if (st.cand[k].some(c => of(c) === v)) w.push(k);
-        if (!w.length) throw new Contra(`${word} ${v} sin nadie posible`);
-        if (w.length === 1) ch = emit(w[0], c => of(c) === v, `solo ${name(w[0])} puede ocupar la ${word} ${v}`) || ch;
-      }
-      if (ch) return true;
+      for (const { word, size, of } of DIMS)
+        for (let v = 1; v <= size; v++) {
+          const w = [];
+          for (let k = 0; k < n; k++) if (st.cand[k].some(c => of(c) === v)) w.push(k);
+          if (!w.length) throw new Contra(`${word} ${v} sin nadie posible`);
+          if (w.length === 1)
+            changed = emit(w[0], c => of(c) === v, `solo ${name(w[0])} puede ocupar la ${word} ${v}`) || changed;
+        }
+      if (changed) return true;
     }
     // 3. line confinement: an entity confined to one line excludes the others from it
     for (let k = 0; k < n; k++) {
       if (st.cand[k].length <= 1) continue;
       for (const { word, of } of DIMS) {
         const lines = new Set(st.cand[k].map(of));
-        if (lines.size === 1) { const v = [...lines][0]; for (let m = 0; m < n; m++) if (m !== k) ch = emit(m, d => of(d) !== v, `${name(k)} tiene que estar en la ${word} ${v}`) || ch; }
+        if (lines.size === 1) {
+          const v = [...lines][0];
+          for (let m = 0; m < n; m++)
+            if (m !== k)
+              changed = emit(m, d => of(d) !== v, `${name(k)} tiene que estar en la ${word} ${v}`) || changed;
+        }
       }
     }
-    if (ch) return true;
+    if (changed) return true;
     // 4. naked subsets: 2 (or 3) persons confined to the same 2 (or 3) lines own those lines
     if (subsets) {
       for (const { word, of } of DIMS) {
-        const ents = []; for (let k = 0; k < n; k++) if (P.isPerson(k) && st.cand[k].length > 1) ents.push(k);
+        const ents = [];
+        for (let k = 0; k < n; k++) if (P.isPerson(k) && st.cand[k].length > 1) ents.push(k);
         const lines = new Map(ents.map(k => [k, [...new Set(st.cand[k].map(of))]]));
         const small = ents.filter(k => lines.get(k).length <= 3);
-        for (let a = 0; a < small.length; a++) for (let b = a + 1; b < small.length; b++) {
-          const groups = [[small[a], small[b]]];
-          for (let c = b + 1; c < small.length; c++) groups.push([small[a], small[b], small[c]]);
-          for (const g of groups) {
-            const u = [...new Set(g.flatMap(k => lines.get(k)))];
-            if (u.length !== g.length) continue;
-            for (let m = 0; m < n; m++) if (!g.includes(m)) ch = emit(m, c => !u.includes(of(c)), `${g.map(name).join(', ')} solo pueden estar en ${word}s ${u.join('/')}: esas ${word}s son suyas`) || ch;
+        for (let a = 0; a < small.length; a++)
+          for (let b = a + 1; b < small.length; b++) {
+            const groups = [[small[a], small[b]]];
+            for (let c = b + 1; c < small.length; c++) groups.push([small[a], small[b], small[c]]);
+            for (const g of groups) {
+              const u = [...new Set(g.flatMap(k => lines.get(k)))];
+              if (u.length !== g.length) continue;
+              for (let m = 0; m < n; m++)
+                if (!g.includes(m))
+                  changed =
+                    emit(
+                      m,
+                      c => !u.includes(of(c)),
+                      `${g.map(name).join(', ')} solo pueden estar en ${word}s ${u.join('/')}: esas ${word}s son suyas`
+                    ) || changed;
+            }
           }
-        }
       }
-      if (ch) return true;
+      if (changed) return true;
     }
     // 5. clue-specific rules. A revise signals a logical contradiction by throwing Contra (directly or
     // through emit). Any other exception is a programming error and must surface instead of silently
     // pruning the branch.
-    for (const con of constraints) if (con.revise) ch = con.revise(st, emit) || ch;
-    return ch;
+    for (const con of constraints) if (con.revise) changed = con.revise(st, emit) || changed;
+    return changed;
   }
-  function propagate(st, log = null) { while (pass(st, log)) { /* fixpoint */ } }
+  function propagate(st, log = null) {
+    while (pass(st, log)) {
+      /* fixpoint */
+    }
+  }
   const clone = st => ({ cand: st.cand.map(a => a.slice()) });
   return { propagate, clone };
 }
