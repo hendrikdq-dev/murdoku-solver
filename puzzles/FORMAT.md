@@ -37,8 +37,8 @@ Todas admiten `"not": true` para negarlas salvo que se indique lo contrario.
 | tipo | parámetros | significado |
 |---|---|---|
 | `in_area` | `area` | está en esa zona (nombre, clase o grupo) |
-| `beside` | `object` \| `area` \| `who` | junto a un objeto (adyacente ortogonal y misma zona), junto a una zona (adyacente a alguna casilla de esa zona) o junto a una persona |
-| `not_beside` | `object` \| `who` | abreviatura de `beside` negado |
+| `beside` | `object` \| `area` | junto a un objeto (adyacente ortogonal y misma zona) o junto a una zona (adyacente a alguna casilla de esa zona). No existe "junto a una persona": dos personajes nunca comparten fila ni columna, así que nunca son adyacentes |
+| `not_beside` | `object` \| `area` | abreviatura de `beside` negado |
 | `on` | `object` | sobre ese objeto (cama, silla, hamaca...) |
 | `row` / `col` | `value`: número, `top`/`bottom`, `first`/`last` | fila o columna concreta |
 | `area_row` / `area_col` | `value`: `top`/`bottom`, `left`/`right` | fila superior/inferior o columna izquierda/derecha de su zona |
@@ -47,7 +47,6 @@ Todas admiten `"not": true` para negarlas salvo que se indique lo contrario.
 | `object_in_area` | `object` | hay ese objeto en su zona |
 | `in_front_of_door` | — | en una de las casillas frente a una puerta/ventana |
 | `direction` | `who`, `dir` (`north`...`southwest`), `exact` / `min` / `max` | al norte/sur/este/oeste de alguien, opcionalmente con número de filas/columnas |
-| `same_row` / `same_col` | `who` | misma fila/columna que alguien |
 | `with` / `not_with` | `who` | misma zona que alguien |
 | `alone` | — | nadie más en su zona |
 | `alone_with` | `who` | a solas con alguien (solo ellos dos en la zona) |

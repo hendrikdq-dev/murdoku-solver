@@ -108,13 +108,11 @@ function build(P, spec, owner) {
     }
     case 'not_beside': return build(P, { ...spec, type: 'beside', not: true }, owner);
     case 'beside': {
+      // "beside <person>" is impossible: two characters never share a row or a column, so they are
+      // never orthogonally adjacent. Only objects and areas are supported.
       if (obj) return { ...base, text: `${myName}: ${neg ? 'no ' : ''}junto a ${obj}`, unary: c => N(P.besideObject(c, obj)) };
       if (spec.area) { const m = P.areaMatcher(spec.area); return { ...base, text: `${myName}: ${neg ? 'no ' : ''}junto a ${spec.area}`, unary: c => N(P.besideArea(c, m)) }; }
-      const w = who(P, spec.who);
-      const pred = (c, d) => N(P.besideCell(c, d));
-      return { ...base, others: [w], text: `${myName}: ${neg ? 'no ' : ''}junto a ${cname(P, w)}`,
-        check: pos => (pos[me] < 0 || pos[w] < 0) ? true : pred(pos[me], pos[w]),
-        revise: (st, emit) => (neg ? false : pairRevise(P, st, emit, me, w, pred, `${myName} junto a ${cname(P, w)}`)) };
+      throw new Error(`beside: falta "object" o "area" (${myName})`);
     }
     case 'on': return { ...base, text: `${myName}: ${neg ? 'no ' : ''}sobre ${obj}`, unary: c => N(P.objectAt(c) === obj) };
     case 'row': {
@@ -145,8 +143,8 @@ function build(P, spec, owner) {
     case 'in_front_of_door': return { ...base, text: `${myName}: ${neg ? 'no ' : ''}frente a una puerta`, unary: c => N(P.inFrontOfDoor(c)) };
     case 'direction': {
       const w = who(P, spec.who);
+      if (!DIRS[spec.dir]) throw new Error(`bad direction: ${spec.dir} (${myName}; usa north, south, east, west, northeast, northwest, southeast o southwest)`);
       const [dr, dc] = DIRS[spec.dir];
-      if (!dr && !dc && dr !== 0) throw new Error(`bad direction ${spec.dir}`);
       // delta along the main axis: positive when me is in the stated direction from who
       const delta = (c, d) => {
         const vr = (P.row(c) - P.row(d)) * dr, vc = (P.col(c) - P.col(d)) * dc;
@@ -163,7 +161,7 @@ function build(P, spec, owner) {
       const pred = (c, d) => N(okDelta(delta(c, d)));
       const qual = spec.exact !== undefined ? `exactamente ${spec.exact} ` : spec.min !== undefined ? `al menos ${spec.min} ` : '';
       const unit = qual ? (dr ? 'filas ' : 'columnas ') : '';
-      return { ...base, others: [w], text: `${myName}: ${neg ? 'no ' : ''}${qual}${unit}${DIR_ES[spec.dir]} ${cname(P, w)}`,
+      return { ...base, text: `${myName}: ${neg ? 'no ' : ''}${qual}${unit}${DIR_ES[spec.dir]} ${cname(P, w)}`,
         check: pos => (pos[me] < 0 || pos[w] < 0) ? true : pred(pos[me], pos[w]),
         revise: (st, emit) => {
           if (neg) return false;
@@ -182,19 +180,11 @@ function build(P, spec, owner) {
           return ch;
         } };
     }
-    case 'same_row': case 'same_col': {
-      const w = who(P, spec.who);
-      const f = t === 'same_row' ? P.row.bind(P) : P.col.bind(P);
-      const pred = (c, d) => N(f(c) === f(d));
-      return { ...base, others: [w], text: `${myName}: ${neg ? 'no ' : ''}en la misma ${t === 'same_row' ? 'fila' : 'columna'} que ${cname(P, w)}`,
-        check: pos => (pos[me] < 0 || pos[w] < 0) ? true : pred(pos[me], pos[w]),
-        revise: (st, emit) => (neg ? false : pairRevise(P, st, emit, me, w, pred, `${myName} en la misma ${t === 'same_row' ? 'fila' : 'columna'} que ${cname(P, w)}`)) };
-    }
     case 'not_with': return build(P, { ...spec, type: 'with', not: true }, owner);
     case 'with': {
       const w = who(P, spec.who);
       const pred = (c, d) => N(P.areaOf(c) === P.areaOf(d));
-      return { ...base, others: [w], text: `${myName}: ${neg ? 'no ' : ''}en la misma zona que ${cname(P, w)}`,
+      return { ...base, text: `${myName}: ${neg ? 'no ' : ''}en la misma zona que ${cname(P, w)}`,
         check: pos => (pos[me] < 0 || pos[w] < 0) ? true : pred(pos[me], pos[w]),
         revise: (st, emit) => {
           if (neg) return false;
@@ -220,7 +210,7 @@ function build(P, spec, owner) {
       const w = who(P, spec.who);
       const ps = persons(P).filter(k => k !== me && k !== w);
       const withC = build(P, { type: 'with', who: spec.who }, owner);
-      return { ...base, others: [w], text: `${myName}: a solas con ${cname(P, w)}`,
+      return { ...base, text: `${myName}: a solas con ${cname(P, w)}`,
         check: pos => {
           if (!withC.check(pos)) return false;
           const cells = [pos[me], pos[w]].filter(x => x >= 0);
@@ -386,4 +376,4 @@ function initialCandidates(P, constraints) {
   });
 }
 
-module.exports = { buildConstraints, initialCandidates, persons };
+module.exports = { buildConstraints, initialCandidates };

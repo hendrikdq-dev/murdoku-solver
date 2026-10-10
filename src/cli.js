@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { loadPuzzle } = require('./load-puzzle');
-const { loadOfficial } = require('./load-official');
+const { loadOfficialJson } = require('./load-official');
 const { solve, describeSolution, murdererOf } = require('./solver');
 const { explain, formatSteps, milestones } = require('./logic');
 const { renderSvg } = require('./render-svg');
@@ -51,9 +51,8 @@ function resolvePuzzle(ref, args) {
   const lang = args.lang || 'en';
   let file = ref;
   if (!fs.existsSync(file)) {
-    const slug = ref.replace(/^official:/, '');
-    if (fs.existsSync(path.join(CACHE, `${slug}.json`))) file = path.join(CACHE, `${slug}.json`);
-    else throw new Error(`No encuentro el puzle "${ref}" (ni fichero ni cache/official/${slug}.json; usa "fetch ${slug}")`);
+    if (fs.existsSync(path.join(CACHE, `${ref}.json`))) file = path.join(CACHE, `${ref}.json`);
+    else throw new Error(`No encuentro el puzle "${ref}" (ni fichero ni cache/official/${ref}.json; usa "fetch ${ref}")`);
   }
   let json = JSON.parse(fs.readFileSync(file, 'utf8'));
   const isOfficial = j => j && j.PROPERTIES && j.GRID;
@@ -73,7 +72,6 @@ function resolvePuzzle(ref, args) {
       else console.error(`(aviso: no hay textos en "${lang}" en caché; usa "fetch ${base} --lang ${lang}")`);
     }
     const ann = fs.existsSync(annPath) ? JSON.parse(fs.readFileSync(annPath, 'utf8')) : {};
-    const { loadOfficialJson } = require('./load-official');
     const P = loadOfficialJson(json, ann, lang);
     P.meta.annotationsPath = annPath;
     return P;

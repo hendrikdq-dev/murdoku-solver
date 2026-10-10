@@ -54,7 +54,7 @@ function fromSpec(j) {
   return new Puzzle({
     name: j.name, objective: j.objective || (characters.some(c => c.role === 'treasure') ? 'treasure' : 'murder'),
     width, height, areaIds, areaNames, subareaOf, objects, occupiableNames, frontCells,
-    areaGroups: j.areaGroups || {}, characters, global: j.global || [], meta: { source: 'own', spec: j },
+    areaGroups: j.areaGroups || {}, characters, global: j.global || [], meta: { source: 'own' },
   });
 }
 
@@ -62,4 +62,4 @@ function loadPuzzle(path) {
   return fromSpec(JSON.parse(fs.readFileSync(path, 'utf8')));
 }
 
-module.exports = { loadPuzzle, fromSpec, parseCellKey };
+module.exports = { loadPuzzle, fromSpec };

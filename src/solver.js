@@ -20,7 +20,8 @@ function solve(P, opts = {}) {
     const k = P.charIndex(h.who);
     st0.cand[k] = st0.cand[k].filter(c => (h.row === undefined || P.row(c) === +h.row) && (h.col === undefined || P.col(c) === +h.col) && (h.cell === undefined || c === h.cell));
   }
-  const withCheck = constraints.filter(c => !c.unary || c.check !== undefined).filter(c => typeof c.check === 'function' && c.check.length > 0);
+  // the default check of a constraint is `() => true` (arity 0): only real checks are evaluated
+  const withCheck = constraints.filter(c => typeof c.check === 'function' && c.check.length > 0);
   const withSupport = constraints.filter(c => c.support);
   const solutions = [];
   let nodes = 0;

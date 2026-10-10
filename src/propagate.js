@@ -85,7 +85,7 @@ function createPropagator(P, constraints, opts = {}) {
   }
   function propagate(st, log = null) { while (pass(st, log)) { /* fixpoint */ } }
   const clone = st => ({ cand: st.cand.map(a => a.slice()) });
-  return { pass, propagate, clone, makeEmit, exactCover };
+  return { propagate, clone };
 }
 
 module.exports = { createPropagator, Contra };

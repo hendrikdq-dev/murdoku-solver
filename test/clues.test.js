@@ -229,14 +229,16 @@ test('several clues at once combine as a conjunction', () => {
   assert.ok(n > 1);
 });
 
-// ---------------- finding: clue types that can never be satisfied ----------------
-test('beside who / same_row / same_col are unsatisfiable under the one-per-row-and-column rule', () => {
-  // Two persons never share a row or a column, so they can never be orthogonally adjacent nor aligned.
-  // The clue library agrees with the oracle (both empty); the types are effectively dead (see docs/AUDITORIA.md).
+// ---------------- clue variants that can never be satisfied are rejected ----------------
+test('beside who / same_row / same_col do not exist: two persons never share a row or a column', () => {
+  // Hence they are never orthogonally adjacent nor aligned; the oracle confirms it on the base board.
   const adjacent = (P, a, b) => Math.abs(row(P, a) - row(P, b)) + Math.abs(col(P, a) - col(P, b)) === 1;
-  assert.strictEqual(assertOracle({ Ana: [{ type: 'beside', who: 'Bea' }] }, [], (P, s) => sameArea(P, s[ANA], s[BEA]) && adjacent(P, s[ANA], s[BEA]), { allowEmpty: true }), 0);
-  assert.strictEqual(assertOracle({ Ana: [{ type: 'same_row', who: 'Bea' }] }, [], (P, s) => row(P, s[ANA]) === row(P, s[BEA]), { allowEmpty: true }), 0);
-  assert.strictEqual(assertOracle({ Ana: [{ type: 'same_col', who: 'Bea' }] }, [], (P, s) => col(P, s[ANA]) === col(P, s[BEA]), { allowEmpty: true }), 0);
+  const P = makePuzzle();
+  baseSolutions = baseSolutions || allSolutions(P);
+  assert.ok(!baseSolutions.some(s => adjacent(P, s[ANA], s[BEA]) || row(P, s[ANA]) === row(P, s[BEA]) || col(P, s[ANA]) === col(P, s[BEA])));
+  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'beside', who: 'Bea' }] })), /beside: falta "object" o "area" \(Ana\)/);
+  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'same_row', who: 'Bea' }] })), /Unknown constraint type: same_row/);
+  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'same_col', who: 'Bea' }] })), /Unknown constraint type: same_col/);
 });
 
 // ---------------- error handling ----------------
@@ -256,6 +258,7 @@ test('a programming error inside a revise surfaces instead of being reported as 
 test('loader and builder reject malformed input with a message', () => {
   assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'levitating' }] })), /Unknown constraint type: levitating/);
   assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'with', who: 'Zoe' }] })), /Unknown character: Zoe/);
+  assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'direction', who: 'Bea', dir: 'norte' }] })), /bad direction: norte \(Ana;/);
   assert.throws(() => makePuzzle({}, [], spec => { spec.areas[2] = 'CCC'; }), /expected 5/);
   assert.throws(() => makePuzzle({}, [], spec => { spec.objects['R9C1'] = 'chair'; }), /outside grid/);
   assert.throws(() => makePuzzle({}, [], spec => { spec.objects['x1'] = 'chair'; }), /Bad cell key/);

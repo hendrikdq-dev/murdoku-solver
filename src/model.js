@@ -43,7 +43,6 @@ class Puzzle {
   rawAreaOf(i) { return this.areaIds[i]; }
   areaName(id) { return this.areaNames[id] ?? `area ${id}`; }
   areaNameOf(i) { return this.areaName(this.mainIds[i]); }
-  rawAreaNameOf(i) { return this.areaName(this.areaIds[i]); }
   cellsOfArea(id) { return this._areaCells.get(id) || []; }
   mainAreaIds() { return [...this._areaCells.keys()]; }
 
@@ -60,11 +59,9 @@ class Puzzle {
   /** Orthogonally adjacent and in the same (main) area: the official meaning of "beside". */
   sameAreaNeighbors(i) { return this.neighbors(i).filter(j => this.mainIds[j] === this.mainIds[i]); }
   besideObject(i, name) { return this.sameAreaNeighbors(i).some(j => this.objects[j] === name); }
-  besideCell(i, j) { return this.mainIds[i] === this.mainIds[j] && this.neighbors(i).includes(j); }
   besideArea(i, matcher) { return this.neighbors(i).some(j => matcher(this.mainIds[j]) || matcher(this.areaIds[j])); }
   inFrontOfDoor(i) { return this._front.has(i); }
   areaHasObject(id, name) { return this.cellsOfArea(id).some(j => this.objects[j] === name); }
-  cellsWithObject(name) { const out = []; for (let i = 0; i < this.n; i++) if (this.objects[i] === name) out.push(i); return out; }
   columnHasObject(c, name) { for (let r = 1; r <= this.height; r++) if (this.objects[this.idx(r, c)] === name) return true; return false; }
   rowHasObject(r, name) { for (let c = 1; c <= this.width; c++) if (this.objects[this.idx(r, c)] === name) return true; return false; }
   topRowOfArea(id) { return Math.min(...this.cellsOfArea(id).map(i => this.row(i))); }
@@ -113,15 +110,6 @@ class Puzzle {
     if (k === undefined) throw new Error(`Unknown character: ${name}`);
     return k;
   }
-  charsWith(filter = {}) {
-    return this.characters.map((ch, k) => k).filter(k => {
-      const ch = this.characters[k];
-      if (filter.sex && ch.sex !== filter.sex) return false;
-      if (filter.attr && !ch.attrs.has(filter.attr)) return false;
-      if (filter.group && !ch.attrs.has(filter.group)) return false;
-      return true;
-    });
-  }
   isPerson(k) { return this.characters[k].role !== 'treasure'; }
 }
 
@@ -136,4 +124,4 @@ function defaultOccupiable(extra = []) {
   return s;
 }
 
-module.exports = { Puzzle, normObj, defaultOccupiable, DIRS };
+module.exports = { Puzzle, normObj, defaultOccupiable };

@@ -70,4 +70,4 @@ function milestones(result) {
   return out;
 }
 
-module.exports = { explain, formatSteps, milestones, Contra };
+module.exports = { explain, formatSteps, milestones };
