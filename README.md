@@ -1,5 +1,7 @@
 # murdoku-solver
 
+[![CI](https://github.com/hendrikdq-dev/murdoku-solver/actions/workflows/ci.yml/badge.svg)](https://github.com/hendrikdq-dev/murdoku-solver/actions/workflows/ci.yml)
+
 Herramientas para resolver y, sobre todo, **explicar** puzles [Murdoku](https://murdoku.com) (el juego de Manuel Garand que mezcla sudoku y misterio de asesinato): un solucionador exhaustivo, un motor de deducción que genera la cadena lógica paso a paso en español (útil para dar pistas progresivas sin desvelar la solución), un cargador de los puzles públicos de murdoku.com/play y un renderizador SVG del tablero.
 
 Sin dependencias: solo Node.js 20 o superior.
