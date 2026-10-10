@@ -15,11 +15,13 @@ function explain(P, opts = {}) {
   const solved = st => st.cand.every(a => a.length === 1);
 
   const st = initialState(P, constraints, opts.hypotheses);
-  const steps = []; // {kind:'deduce'|'whatif', text, details?}
+  // steps: { kind: 'deduce', who, name, reason, kept, removed, fixedAt, text } (one per narrowing, see
+  // propagate.js) or { kind: 'whatif', who, cell, text, details: [text] } (a refuted hypothesis)
+  const steps = [];
+  const deduce = log => { for (const e of log) steps.push({ kind: 'deduce', ...e }); };
   let stuck = false, contradiction = null;
   try {
-    const log0 = []; prop.propagate(st, log0);
-    for (const l of log0) steps.push({ kind: 'deduce', text: l });
+    const log0 = []; prop.propagate(st, log0); deduce(log0);
     while (!solved(st)) {
       const order = []; for (let k = 0; k < n; k++) if (P.isPerson(k) && st.cand[k].length > 1 && st.cand[k].length <= maxWhatIf) order.push(k);
       let best = null;
@@ -29,11 +31,10 @@ function explain(P, opts = {}) {
         catch (e) { if (!(e instanceof Contra)) throw e; if (!best || sub.length < best.sub.length) best = { k, cell, sub, msg: e.message }; }
       }
       if (!best) { stuck = true; break; }
-      const fixed = best.sub.filter(l => l.includes('quedan 1 (')).map(l => { const a = l.indexOf('] ') + 2, b = l.indexOf(': quedan 1 ('), c = l.indexOf(')', b); return l.slice(a, b) + '=' + l.slice(b + 12, c); });
-      steps.push({ kind: 'whatif', text: `SUPONGAMOS ${name(best.k)} en ${S(best.cell)} ⇒ ${fixed.length ? fixed.join(', ') + ' ⇒ ' : ''}CONTRADICCIÓN: ${best.msg}`, details: best.sub });
+      const fixed = best.sub.filter(e => e.fixedAt).map(e => `${e.name}=${e.fixedAt}`);
+      steps.push({ kind: 'whatif', who: best.k, cell: best.cell, text: `SUPONGAMOS ${name(best.k)} en ${S(best.cell)} ⇒ ${fixed.length ? fixed.join(', ') + ' ⇒ ' : ''}CONTRADICCIÓN: ${best.msg}`, details: best.sub.map(e => e.text) });
       st.cand[best.k] = st.cand[best.k].filter(c => c !== best.cell);
-      const log = []; prop.propagate(st, log);
-      for (const l of log) steps.push({ kind: 'deduce', text: l });
+      const log = []; prop.propagate(st, log); deduce(log);
     }
   } catch (e) {
     if (!(e instanceof Contra)) throw e;
@@ -60,7 +61,7 @@ function milestones(result) {
   const out = [];
   for (const s of result.steps) {
     if (s.kind === 'whatif') out.push(s.text);
-    else { const m = /^\[(.+)\] (.+?): quedan 1 \((R\d+C\d+)\)/.exec(s.text); if (m) out.push(`${m[2]} fijado en ${m[3]} — ${m[1]}`); }
+    else if (s.fixedAt) out.push(`${s.name} fijado en ${s.fixedAt} — ${s.reason}`);
   }
   return out;
 }

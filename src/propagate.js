@@ -19,6 +19,8 @@ function createPropagator(P, constraints, opts = {}) {
     { word: 'columna', size: P.width, of: c => P.col(c) },
   ];
 
+  // Every narrowing is logged as an event { who, name, reason, kept, removed, fixedAt, text }:
+  // structured fields for the deduction engine, `text` for the explanations shown to the user.
   function makeEmit(st, log) {
     return (k, pred, reason) => {
       const before = st.cand[k];
@@ -27,7 +29,10 @@ function createPropagator(P, constraints, opts = {}) {
       st.cand[k] = after;
       if (log) {
         const removed = before.filter(c => !pred(c));
-        log.push(`[${reason}] ${name(k)}: quedan ${after.length}${fmtCells(after)} — se eliminan ${removed.length <= 8 ? removed.map(S).join(' ') : removed.length + ' casillas'}`);
+        log.push({
+          who: k, name: name(k), reason, kept: after, removed, fixedAt: after.length === 1 ? S(after[0]) : null,
+          text: `[${reason}] ${name(k)}: quedan ${after.length}${fmtCells(after)} — se eliminan ${removed.length <= 8 ? removed.map(S).join(' ') : removed.length + ' casillas'}`,
+        });
       }
       if (!after.length) throw new Contra(`${name(k)} se queda sin casilla`);
       return true;

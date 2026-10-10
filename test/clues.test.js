@@ -6,10 +6,12 @@
 // solver and must never eliminate a cell that belongs to a solution (soundness of the propagation).
 const test = require('node:test');
 const assert = require('node:assert');
+const fs = require('fs');
+const path = require('path');
 const { fromSpec } = require('../src/load-puzzle');
 const { solve } = require('../src/solver');
 const { explain } = require('../src/logic');
-const { buildConstraints } = require('../src/clues');
+const { buildConstraints, CLUE_TYPES } = require('../src/clues');
 
 // 5x5 board, 5 characters (one per row and column), 3 blocked cells, no clues: 7680 solutions.
 const BASE = {
@@ -239,6 +241,17 @@ test('beside who / same_row / same_col do not exist: two persons never share a r
   assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'beside', who: 'Bea' }] })), /pista de Ana \(beside\): falta "object" o "area"/);
   assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'same_row', who: 'Bea' }] })), /tipo de pista desconocido: same_row/);
   assert.throws(() => solve(makePuzzle({ Ana: [{ type: 'same_col', who: 'Bea' }] })), /tipo de pista desconocido: same_col/);
+});
+
+// ---------------- documentation in sync with the code ----------------
+test('every clue type in puzzles/FORMAT.md exists and every builder is documented (victim is implicit)', () => {
+  const doc = fs.readFileSync(path.join(__dirname, '..', 'puzzles', 'FORMAT.md'), 'utf8');
+  const documented = new Set();
+  for (const line of doc.split('\n')) {
+    const m = /^\| ([^|]+)\|/.exec(line);
+    if (m) for (const t of m[1].matchAll(/`([a-z_]+)`/g)) documented.add(t[1]);
+  }
+  assert.deepStrictEqual([...documented].sort(), CLUE_TYPES.filter(t => t !== 'victim').sort());
 });
 
 // ---------------- error handling ----------------
