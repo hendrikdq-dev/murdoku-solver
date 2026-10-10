@@ -1,0 +1,45 @@
+{
+  "name": "El tesoro del faro (7x7)",
+  "objective": "treasure",
+  "areas": [
+    "tttPPPP",
+    "LLLPPPP",
+    "LLLPPPP",
+    "GGGGBBB",
+    "GGGGBBB",
+    "KKCCCBB",
+    "KKCCCBB"
+  ],
+  "areaNames": { "t": "Faro (torre)", "L": "Faro", "P": "Muelle", "G": "Jardín", "B": "Playa", "K": "Cocina", "C": "Cabaña" },
+  "subareas": { "t": "L" },
+  "objects": {
+    "R1C2": "table", "R2C2": "bed", "R3C1": "sack", "R3C3": "plant",
+    "R1C7": "safe", "R2C5": "chair", "R3C6": "table",
+    "R4C1": "tree", "R5C3": "tree",
+    "R4C7": "bed", "R5C7": "sack",
+    "R6C1": "table", "R7C1": "chair",
+    "R6C4": "bed", "R7C5": "chair"
+  },
+  "doors": [ [[4, 4], [4, 5]], [[6, 2], [6, 3]] ],
+  "groups": { "marineros": ["Pau", "Simón"] },
+  "characters": [
+    { "name": "Marina", "sex": "f", "clue": "Estaba en el Faro, junto a una cama.",
+      "constraints": [{ "type": "in_area", "area": "Faro" }, { "type": "beside", "object": "bed" }] },
+    { "name": "Tomás", "sex": "m", "attrs": ["hat"], "clue": "Estaba en el Jardín, al sur de Marina.",
+      "constraints": [{ "type": "in_area", "area": "Jardín" }, { "type": "direction", "who": "Marina", "dir": "south" }] },
+    { "name": "Olga", "sex": "f", "attrs": ["hat"], "clue": "Estaba en la fila superior del Muelle; en su columna no había ninguna mesa.",
+      "constraints": [{ "type": "in_area", "area": "Muelle" }, { "type": "area_row", "value": "top" }, { "type": "no_object_in_line", "object": "table", "line": "column" }] },
+    { "name": "Pau", "sex": "m", "clue": "Estaba tumbado en una cama.",
+      "constraints": [{ "type": "on", "object": "bed" }] },
+    { "name": "Rita", "sex": "f", "attrs": ["eyepatch"], "clue": "Estaba en una esquina de la Cocina, pero no sentada.",
+      "constraints": [{ "type": "in_area", "area": "Cocina" }, { "type": "corner", "of": "area" }, { "type": "on", "object": "chair", "not": true }] },
+    { "name": "Simón", "sex": "m", "clue": "Estaba junto a un saco; en su fila no había ninguna cama.",
+      "constraints": [{ "type": "beside", "object": "sack" }, { "type": "no_object_in_line", "object": "bed", "line": "row" }] },
+    { "name": "Tesoro", "role": "treasure", "clue": "El tesoro ocupa la fila y la columna que quedan libres." }
+  ],
+  "global": [
+    { "type": "empty_area", "area": "Faro (torre)" },
+    { "type": "area_count", "area": "Cabaña", "min": 1 },
+    { "type": "area_count", "area": "Playa", "group": "marineros", "min": 1 }
+  ]
+}
