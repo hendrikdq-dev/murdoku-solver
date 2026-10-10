@@ -9,6 +9,7 @@ const assert = require('node:assert');
 const { fromSpec } = require('../src/load-puzzle');
 const { solve } = require('../src/solver');
 const { explain } = require('../src/logic');
+const { buildConstraints } = require('../src/clues');
 
 // 5x5 board, 5 characters (one per row and column), 3 blocked cells, no clues: 7680 solutions.
 const BASE = {
@@ -236,6 +237,19 @@ test('beside who / same_row / same_col are unsatisfiable under the one-per-row-a
   assert.strictEqual(assertOracle({ Ana: [{ type: 'beside', who: 'Bea' }] }, [], (P, s) => sameArea(P, s[ANA], s[BEA]) && adjacent(P, s[ANA], s[BEA]), { allowEmpty: true }), 0);
   assert.strictEqual(assertOracle({ Ana: [{ type: 'same_row', who: 'Bea' }] }, [], (P, s) => row(P, s[ANA]) === row(P, s[BEA]), { allowEmpty: true }), 0);
   assert.strictEqual(assertOracle({ Ana: [{ type: 'same_col', who: 'Bea' }] }, [], (P, s) => col(P, s[ANA]) === col(P, s[BEA]), { allowEmpty: true }), 0);
+});
+
+// ---------------- error handling ----------------
+test('a programming error inside a revise surfaces instead of being reported as a contradiction', () => {
+  const P = makePuzzle({ Ana: [{ type: 'in_area', area: 'Kitchen' }] });
+  const broken = { owner: null, check: () => true, revise: () => { throw new TypeError('simulated bug'); } };
+  const constraints = [...buildConstraints(P), broken];
+  assert.throws(() => solve(P, { constraints }), TypeError);
+  assert.throws(() => explain(P, { constraints }), TypeError);
+  // whereas a genuine contradiction raised by a clue is still handled: no solutions, no exception
+  const impossible = [{ type: 'empty_area', area: 'Hall' }, { type: 'area_count', area: 'Hall', min: 1 }];
+  assert.strictEqual(solve(makePuzzle({}, impossible)).solutions.length, 0);
+  assert.match(explain(makePuzzle({}, impossible)).contradiction, /la zona Hall no puede tener 1 personas/);
 });
 
 // ---------------- loader and builder errors ----------------

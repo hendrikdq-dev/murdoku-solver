@@ -7,6 +7,7 @@
 // `emit(k, keepPredicate, reasonText)` keeps the cells of k satisfying the predicate and returns
 // true when something was removed (it throws when k runs out of cells).
 const { normObj } = require('./model');
+const { Contra } = require('./propagate');
 
 const DIRS = {
   north: [-1, 0], south: [1, 0], east: [0, 1], west: [0, -1],
@@ -325,7 +326,7 @@ function build(P, spec, owner) {
           if (st.cand[me].length === 1) {
             const a = P.areaOf(st.cand[me][0]);
             const can = ps.filter(k => st.cand[k].some(d => P.areaOf(d) === a));
-            if (can.length === 0) throw new Error('nadie puede acompañar a la víctima');
+            if (can.length === 0) throw new Contra('nadie puede acompañar a la víctima');
             if (can.length === 1) ch = emit(can[0], d => P.areaOf(d) === a, `solo ${cname(P, can[0])} puede estar con la víctima en ${P.areaName(a)}`) || ch;
             const fixed = ps.filter(k => st.cand[k].every(d => P.areaOf(d) === a));
             if (fixed.length === 1) for (const k of ps) if (k !== fixed[0]) ch = emit(k, d => P.areaOf(d) !== a, `${cname(P, fixed[0])} está con la víctima en ${P.areaName(a)}: nadie más puede estar allí`) || ch;
@@ -357,7 +358,7 @@ function build(P, spec, owner) {
           for (const a of areas) {
             const can = ps.filter(k => st.cand[k].some(d => P.areaOf(d) === a));
             const fixed = ps.filter(k => st.cand[k].every(d => P.areaOf(d) === a));
-            if (can.length < min) throw new Error(`la zona ${P.areaName(a)} no puede tener ${min} ${whoTxt}`);
+            if (can.length < min) throw new Contra(`la zona ${P.areaName(a)} no puede tener ${min} ${whoTxt}`);
             if (min > 0 && can.length === min) for (const k of can) ch = emit(k, d => P.areaOf(d) === a, `solo ${can.map(x => cname(P, x)).join('/')} pueden cubrir ${P.areaName(a)} (mínimo ${min} ${whoTxt})`) || ch;
             if (fixed.length >= max) for (const k of ps) if (!fixed.includes(k)) ch = emit(k, d => P.areaOf(d) !== a, `${P.areaName(a)} ya tiene su máximo de ${whoTxt}`) || ch;
           }

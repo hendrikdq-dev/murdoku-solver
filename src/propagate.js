@@ -78,10 +78,9 @@ function createPropagator(P, constraints, opts = {}) {
       }
       if (ch) return true;
     }
-    for (const con of constraints) if (con.revise) {
-      try { ch = con.revise(st, emit) || ch; }
-      catch (e) { if (e instanceof Contra) throw e; throw new Contra(e.message); }
-    }
+    // A revise signals a logical contradiction by throwing Contra (directly or through emit). Any other
+    // exception is a programming error and must surface instead of silently pruning the branch.
+    for (const con of constraints) if (con.revise) ch = con.revise(st, emit) || ch;
     return ch;
   }
   function propagate(st, log = null) { while (pass(st, log)) { /* fixpoint */ } }
